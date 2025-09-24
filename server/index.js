@@ -1,31 +1,37 @@
-require("dotenv").config({ path: __dirname + "/.env" });
-const express = require('express');
-// const pool = require(__dirname + "/config/db.config.js");
-const pool = require(__dirname + "/db.config.js");
+import express from "express";
+import dotenv from "dotenv";
+import { supabase } from "./supabaseClient.js"; // import your Supabase client
+
+dotenv.config();
+
+console.log("URL:", process.env.SUPABASE_URL);
+console.log("KEY:", process.env.SUPABASE_KEY ? "Loaded" : "Missing");
+
 
 const app = express();
-
 const PORT = process.env.PORT || 9000;
 
-//Functions
-const getProducts =  (req, res) => {
-  pool.query('SELECT * FROM products', (error, products) => {
-    if (error) {
-      throw error
-    }
-    res.status(200).json(products.rows)
-  })
-}
+// Functions
+const getProducts = async (req, res) => {
+  const { data: products, error } = await supabase
+    .from("products")
+    .select("*");
 
-//Here you can add your routes
-//Here's an example
+  if (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.status(200).json(products);
+};
+
+// Routes
 app.get("/", (req, res) => {
-    res.send("Hello World!");
-  });
+  res.send("Hello World!");
+});
 
-app.get('/products', getProducts)
-
+app.get("/products", getProducts);
 
 app.listen(PORT, () => {
-    console.log(`Server listening on the port  ${PORT}`);
-})
+  console.log(`Server listening on port ${PORT}`);
+});
