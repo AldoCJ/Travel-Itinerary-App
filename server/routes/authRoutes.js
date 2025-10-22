@@ -61,6 +61,12 @@ router.post("/signin", async (req, res) => {
 
     // Respond with user info (excluding password)
     console.log("User signed in:", data.user);
-    res.status(200).json({ user: { id: data.user.id, email: data.user.email } });
+    res.status(200).json({ 
+        user: { 
+            id: data.user.id, 
+            email: data.user.email 
+        },
+        access_token: data.session?.access_token
+    });
 });
 export default router;
