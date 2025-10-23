@@ -29,7 +29,7 @@ export const create = async (data) => {
     `INSERT INTO "Days" (trip_id, date, summary, lodging, lodging_cost, transport_cost)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [trip_id, date, summary, description, lodging, lodging_cost, transport_cost]
+    [trip_id, date, summary, lodging, lodging_cost, transport_cost]
   );
   return rows[0];
 };

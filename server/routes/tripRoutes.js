@@ -3,16 +3,18 @@ import {
   createTrip,
   getTrip,
   getTripDetails,
-  addDay,
-  addEventToDay,
   updateTrip,
-  deleteTrip
+  deleteTrip,
+  addDay,
+  removeDay,
+  addEventToDay,
+  
 } from "../controllers/TripController.js";
 
 const router = express.Router();
 
 router.route('/:tripId')
-    .get(getTrip)
+    .get(getTripDetails)
     .put(updateTrip)
     .delete(deleteTrip);
 
@@ -23,5 +25,12 @@ router.route('/')
         console.log("Listing all trip thumbnails with params: ", req.query);
         res.send('Get all Trips');
     });
+
+router.route('/:tripId/days')
+    .post(addDay)
+
+router.route('/:tripId/days/:dayId')
+    .delete(removeDay);
+
 
 export default router;
