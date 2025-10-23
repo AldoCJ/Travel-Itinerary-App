@@ -1,8 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import { supabase } from "./supabaseClient.js"; // import your Supabase client
-import userRoutes from "./routes/users.js";
+import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import tripRoutes from "./routes/tripRoutes.js";
 
 dotenv.config();
 
@@ -31,31 +32,14 @@ const requireAuth = async (req, res, next) => {
     next();
 }
 
-// Functions
-const getProducts = async (req, res) => {
-  const { data: products, error } = await supabase
-    .from("products")
-    .select("*");
-
-  if (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
-  }
-
-  res.status(200).json(products);
-};
 
 // Routes
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.get("/products", getProducts);
-//app.use("/users", userRoutes);
 app.use("/auth", authRoutes);
+app.use("/trips", tripRoutes);
 
 app.use(requireAuth); // Apply authentication middleware globally except for auth routes
 app.use("/users", userRoutes);
+
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
