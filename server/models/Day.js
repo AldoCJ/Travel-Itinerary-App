@@ -8,6 +8,14 @@ export const getByTripId = async (tripId) => {
   return rows;
 };
 
+export const getAll = async (tripId) => {
+    const { rows } = await pool.query(
+        `SELECT * FROM "Days" WHERE trip_id = $1 ORDER BY date ASC`,
+        [tripId]
+    );
+    return rows;
+};
+
 export const getById = async (id) => {
   const { rows } = await pool.query(
     `SELECT * FROM "Days" WHERE id = $1`,
@@ -35,20 +43,48 @@ export const create = async (data) => {
 };
 
 // 🟢 Update a day
-export const update = async (dayId, updates) => {
-    const fields = Object.keys(updates);
-    const values = Object.values(updates);
+export const update = async (dayId, fields) => {
+    if (!dayId || !fields || Object.keys(fields).length === 0) {
+        return null;
+    }
 
-    if (fields.length === 0) return null;
+    const allowedFields = [
+        'date',
+        'summary',
+        'lodging',
+        'lodging_cost',
+        'transport_cost'
+    ];
 
-    // Dynamically build SET clause
-    const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+    const setClauses = [];
+    const values = [];
+    let index = 1;
 
-    const { rows } = await pool.query(
-        `UPDATE "Days" SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} RETURNING *`,
-        [...values, dayId]
-    );
+    for (const [key, value] of Object.entries(fields)) {
+        if (allowedFields.includes(key)) {
+            setClauses.push(`"${key}" = $${index}`);
+            values.push(value);
+            index++;
+        }
+    }
 
+    if (setClauses.length === 0) {
+        return null; // No valid fields provided
+    }
+
+    // Always update timestamp
+    setClauses.push(`updated_at = now()`);
+
+    const query = `
+    UPDATE "Days"
+    SET ${setClauses.join(', ')}
+    WHERE id = $${index}
+    RETURNING *;
+  `;
+
+    values.push(dayId);
+
+    const { rows } = await pool.query(query, values);
     return rows[0];
 };
 

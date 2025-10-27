@@ -11,33 +11,41 @@ import {
   removeDay,
   addEvent,
   updateEvent,
-  removeEvent
+  removeEvent,
+  getDay,
+  getAllDays,
+  getEvent,
+  getAllEvents
 } from "../controllers/TripController.js";
 
 const router = express.Router();
 
 router.route('/:tripId')
     .get(getTripDetails)
-    .put(updateTrip)
+    .patch(updateTrip)
     .delete(deleteTrip);
 
 
 router.route('/')
     .post(createTrip)
-    .get(getAllTrips)
+    .get(getAllTrips);
 
 router.route('/:tripId/days')
     .post(addDay)
+    .get(getAllDays)
 
 router.route('/:tripId/days/:dayId')
-    .put(updateDay)
+    .get(getDay)
+    .patch(updateDay)
     .delete(removeDay);
 
 router.route('/:tripId/days/:dayId/events')
-    .post(addEvent);
+    .post(addEvent)
+    .get(getAllEvents);
 
 router.route('/:tripId/days/:dayId/events/:eventId')
-    .put(updateEvent)
+    .get(getEvent)
+    .patch(updateEvent)
     .delete(removeEvent);
 
 export default router;

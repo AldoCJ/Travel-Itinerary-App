@@ -63,24 +63,35 @@ export const create = async (data) => {
 };
 
 // 🟢 Update an existing trip
-export const update = async (id, data) => {
-    const { title, summary, start_date, end_date, number_of_people, total_price } = data;
+export const update = async (tripId, fields) => {
+    if (!tripId || !fields || Object.keys(fields).length === 0) {
+        return null;
+    }
 
-    const { rows } = await pool.query(
-        `UPDATE "Trips"
-        SET 
-        title = COALESCE($1, title),
-        summary = COALESCE($2, summary),
-        start_date = COALESCE($3, start_date),
-        end_date = COALESCE($4, end_date),
-        number_of_people = COALESCE($5, number_of_people),
-        total_price = COALESCE($6, total_price),
-        updated_at = NOW()
-        WHERE id = $7
-        RETURNING *`,
-        [title, summary, start_date, end_date, number_of_people, total_price, id]
-    );
+    // Dynamically build SET clause
+    const setClauses = [];
+    const values = [];
+    let index = 1;
 
+    for (const [key, value] of Object.entries(fields)) {
+        setClauses.push(`"${key}" = $${index}`);
+        values.push(value);
+        index++;
+    }
+
+    // Always update timestamp
+    setClauses.push(`updated_at = now()`);
+
+    const query = `
+    UPDATE "Trips"
+    SET ${setClauses.join(', ')}
+    WHERE id = $${index}
+    RETURNING *;
+  `;
+
+    values.push(tripId);
+
+    const { rows } = await pool.query(query, values);
     return rows[0];
 };
 

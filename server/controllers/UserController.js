@@ -39,10 +39,19 @@ export const getAllUsers = async (req, res) => {
 // HAVE TO DISABLE AUTH FROM INDEX.JS FIRST (UNTIL AUTH IS IMPLEMENTED IN ROUTES)
 export const updateUser = async (req, res) => {
     try {
-        const { id } = req.params;  // ID passed in the URL
+        const { id } = req.params;  // User ID passed in the URL
         const updates = req.body;
 
+        if (!id) {
+            return res.status(400).json({ error: "User ID is required" });
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ error: "No fields provided for update" });
+        }
+
         const updatedUser = await User.update(id, updates);
+
         if (!updatedUser) {
             return res.status(404).json({ error: "User not found" });
         }

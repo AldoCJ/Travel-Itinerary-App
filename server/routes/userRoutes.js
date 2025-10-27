@@ -15,7 +15,7 @@ router.get("/", getAllUsers);
 // By ID routes
 router.route("/:id")
     .get(getUser)
-    .put(updateUser)
+    .patch(updateUser)
     .delete(deleteUser);
 
 
