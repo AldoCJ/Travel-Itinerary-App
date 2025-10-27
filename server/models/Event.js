@@ -1,22 +1,22 @@
 // models/eventModel.js
 import pool from "../database.js";
 
-// 🟢 Get all events for a specific day
-export const getByDayId = async (dayId) => {
-  const { rows } = await pool.query(
-    `SELECT * FROM "Events" WHERE day_id = $1 ORDER BY time ASC`,
-    [dayId]
-  );
-  return rows;
+// 🟢 Get all events for a given day
+export const getAll = async (dayId) => {
+    const { rows } = await pool.query(
+        `SELECT * FROM "Events" WHERE day_id = $1 ORDER BY time ASC`,
+        [dayId]
+    );
+    return rows;
 };
 
-// 🟢 Get a single event by its ID
-export const getById = async (id) => {
-  const { rows } = await pool.query(
-    `SELECT * FROM "Events" WHERE id = $1`,
-    [id]
-  );
-  return rows[0];
+// 🟢 Get a specific event by ID
+export const getById = async (eventId) => {
+    const { rows } = await pool.query(
+        `SELECT * FROM "Events" WHERE id = $1`,
+        [eventId]
+    );
+    return rows[0];
 };
 
 // 🟢 Create a new event for a day
@@ -43,18 +43,26 @@ export const create = async (data) => {
 };
 
 // 🟢 Update an event
-export const update = async (id, updates) => {
-  const fields = Object.keys(updates);
-  const values = Object.values(updates);
+export const update = async (eventId, updates) => {
+    const fields = Object.keys(updates);
+    const values = Object.values(updates);
 
-  const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(", ");
+    if (fields.length === 0) {
+        throw new Error("No fields provided for update");
+    }
 
-  const { rows } = await pool.query(
-    `UPDATE "Events" SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} RETURNING *`,
-    [...values, id]
-  );
+    // Dynamically build the SET clause
+    const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(", ");
 
-  return rows[0];
+    const { rows } = await pool.query(
+        `UPDATE "Events"
+        SET ${setClause}, updated_at = NOW()
+        WHERE id = $${fields.length + 1}
+        RETURNING *`,
+        [...values, eventId]
+    );
+
+    return rows[0];
 };
 
 // 🟢 Delete an event

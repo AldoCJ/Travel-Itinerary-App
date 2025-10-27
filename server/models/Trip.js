@@ -63,20 +63,39 @@ export const create = async (data) => {
 };
 
 // 🟢 Update an existing trip
-export const update = async (id, updates) => {
-  const fields = Object.keys(updates);
-  const values = Object.values(updates);
+export const update = async (tripId, fields) => {
+    if (!tripId || !fields || Object.keys(fields).length === 0) {
+        return null;
+    }
 
-  // Dynamically build SET clause
-  const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
+    // Dynamically build SET clause
+    const setClauses = [];
+    const values = [];
+    let index = 1;
 
-  const { rows } = await pool.query(
-    `UPDATE "Trips" SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} RETURNING *`,
-    [...values, id]
-  );
+    for (const [key, value] of Object.entries(fields)) {
+        setClauses.push(`"${key}" = $${index}`);
+        values.push(value);
+        index++;
+    }
 
-  return rows[0];
+    // Always update timestamp
+    setClauses.push(`updated_at = now()`);
+
+    const query = `
+    UPDATE "Trips"
+    SET ${setClauses.join(', ')}
+    WHERE id = $${index}
+    RETURNING *;
+  `;
+
+    values.push(tripId);
+
+    const { rows } = await pool.query(query, values);
+    return rows[0];
 };
+
+
 
 // 🟢 Delete a trip
 export const remove = async (id) => {

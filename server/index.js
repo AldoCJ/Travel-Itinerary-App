@@ -37,7 +37,7 @@ const requireAuth = async (req, res, next) => {
 app.use("/auth", authRoutes);
 app.use("/trips", tripRoutes);
 app.use("/users", userRoutes);
-app.use(requireAuth); // Apply authentication middleware globally except for auth routes
+//app.use(requireAuth); // Apply authentication middleware globally except for auth routes
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
