@@ -38,10 +38,24 @@ export const getTripDetails = async (req, res) => {
     }
 
     const days = await Day.getByTripId(tripId);
+    for (let day of days) {
+      const events = await Event.getByDayId(day.id);
+      day.events = events;
+    }
 
     res.json({ trip, days });
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve trip details' });
+  }
+};
+
+export const getUserTrips = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const trips = await Trip.getByUserId(userId);
+    res.json(trips);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve user trips' });
   }
 };
 
@@ -71,7 +85,6 @@ export const deleteTrip = async (req, res) => {
 
 // -------------------- Day Controllers -------------------- //
 
-
 // 🟢 Add a day to a trip
 export const addDay = async (req, res) => {
   try {
@@ -84,18 +97,15 @@ export const addDay = async (req, res) => {
   }
 };
 
-// 🟢 Get day details
-export const getDay = async (req, res) => {
+// Update a day
+export const updateDay = async (req, res) => {
   try {
     const { dayId } = req.params;
-    const day = await Day.getById(dayId);
-    if (!day) {
-      return res.status(404).json({ error: 'Day not found' });
-    }
-    res.json(day);
+    const updatedDay = await Day.update(dayId, req.body);
+    res.json(updatedDay);
   } catch (err) {
-    console.error("Error retrieving day:", err);
-    res.status(500).json({ error: "Failed to retrieve day" });
+    console.error("Error updating day:", err);
+    res.status(500).json({ error: "Failed to update day" });
   }
 };
 
@@ -113,11 +123,11 @@ export const removeDay = async (req, res) => {
 
 // -------------------- Event Controllers -------------------- //
 
-// 🟢 Add an event to a day
-export const addEventToDay = async (req, res) => {
+// Add an event to a day
+export const addEvent = async (req, res) => {
   try {
     const { dayId } = req.params;
-    const event = await Event.create({ ...req.body, day_id: dayId });
+    const event = await Event.create({ day_id : dayId, ...req.body });
     res.status(201).json(event);
   } catch (err) {
     console.error("Error adding event:", err);
@@ -125,3 +135,26 @@ export const addEventToDay = async (req, res) => {
   }
 };
 
+// Update an event
+export const updateEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params.eventId;
+    const updatedEvent = await Event.update(eventId, req.body);
+    res.json(updatedEvent);
+  } catch (err) {
+    console.error("Error updating event:", err);
+    res.status(500).json({ error: "Failed to update event" });
+  }
+};
+
+// Remove an event
+export const removeEvent = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    await Event.remove(eventId);
+    res.json({ message: "Event removed successfully" });
+  } catch (err) {
+    console.error("Error removing event:", err);
+    res.status(500).json({ error: "Failed to remove event" });
+  }
+};

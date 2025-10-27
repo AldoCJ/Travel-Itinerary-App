@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import { supabase } from "./supabaseClient.js"; // import your Supabase client
+import pool from "./database.js";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import tripRoutes from "./routes/tripRoutes.js";
@@ -11,7 +12,6 @@ const app = express();
 const PORT = process.env.PORT || 9000;
 
 app.use(express.json()); // Middleware to parse JSON bodies
-
 
 const requireAuth = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -39,8 +39,12 @@ app.use("/trips", tripRoutes);
 app.use("/users", userRoutes);
 app.use(requireAuth); // Apply authentication middleware globally except for auth routes
 
-
-
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+});
+
+process.on("SIGINT", async () => {
+  console.log("Shutting down server...");
+  await pool.end();
+  process.exit(0);
 });

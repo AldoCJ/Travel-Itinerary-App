@@ -31,6 +31,15 @@ export const getById = async (id) => {
   return rows[0];
 };
 
+// 🟢 Get trips by User ID
+export const getByUserId = async (userId) => {
+  const { rows } = await pool.query(
+    `SELECT * FROM "Trips" WHERE user_id = $1`,
+    [userId]
+  );
+  return rows;
+};
+
 // 🟢 Create a new trip
 export const create = async (data) => {
   const {

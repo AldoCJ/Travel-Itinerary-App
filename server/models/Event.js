@@ -33,7 +33,7 @@ export const create = async (data) => {
 
   const { rows } = await pool.query(
     `INSERT INTO "Events" 
-      (day_id, title, notes, time, location, cost, photo_url)
+      (day_id, title, notes, time, location, cost, photo)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
     [day_id, title, notes, time, location, cost, photo_url]
