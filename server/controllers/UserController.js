@@ -23,3 +23,33 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// Get All Users
+export const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.getAll();
+        res.json(users);
+    } catch (error) {
+        console.error("Error getting users:", error);
+        res.status(500).json({ error: "Failed to retrieve users" });
+    }
+};
+
+// Update a User Profile (Public Data Only)
+// HAVE TO DISABLE AUTH FROM INDEX.JS FIRST (UNTIL AUTH IS IMPLEMENTED IN ROUTES)
+export const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;  // ID passed in the URL
+        const updates = req.body;
+
+        const updatedUser = await User.update(id, updates);
+        if (!updatedUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ error: "Failed to update user" });
+    }
+};

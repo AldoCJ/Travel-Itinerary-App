@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createTrip,
   getTrip,
+  getAllTrips,
   getTripDetails,
   updateTrip,
   deleteTrip,
@@ -23,10 +24,7 @@ router.route('/:tripId')
 
 router.route('/')
     .post(createTrip)
-    .get((req, res) => {
-        console.log("Listing all trip thumbnails with params: ", req.query);
-        res.send('Get all Trips');
-    });
+    .get(getAllTrips)
 
 router.route('/:tripId/days')
     .post(addDay)

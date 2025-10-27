@@ -35,18 +35,21 @@ export const create = async (data) => {
 };
 
 // 🟢 Update a day
-export const update = async (id, updates) => {
-  const fields = Object.keys(updates);
-  const values = Object.values(updates);
+export const update = async (dayId, updates) => {
+    const fields = Object.keys(updates);
+    const values = Object.values(updates);
 
-  const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(", ");
+    if (fields.length === 0) return null;
 
-  const { rows } = await pool.query(
-    `UPDATE "Days" SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} RETURNING *`,
-    [...values, id]
-  );
+    // Dynamically build SET clause
+    const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
 
-  return rows[0];
+    const { rows } = await pool.query(
+        `UPDATE "Days" SET ${setClause}, updated_at = NOW() WHERE id = $${fields.length + 1} RETURNING *`,
+        [...values, dayId]
+    );
+
+    return rows[0];
 };
 
 // 🟢 Delete a day

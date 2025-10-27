@@ -29,6 +29,25 @@ export const getTrip = async (req, res) => {
   }
 };
 
+export const getAllTrips = async (req, res) => {
+    try {
+        console.log("Fetching all trips...");
+
+        // Optional filters via query parameters
+        const filters = {
+            userId: req.query.userId || null,
+            location: req.query.location || null,
+        };
+
+        const trips = await Trip.getAll(filters);
+
+        res.status(200).json(trips);
+    } catch (error) {
+        console.error("Error fetching trips:", error);
+        res.status(500).json({ error: "Failed to fetch trips" });
+    }
+};
+
 export const getTripDetails = async (req, res) => {
   try {
     const tripId = req.params.tripId;
@@ -61,14 +80,19 @@ export const getUserTrips = async (req, res) => {
 
 // 🟢 Update a trip
 export const updateTrip = async (req, res) => {
-  try {
-    const { tripId } = req.params;
-    const trip = await Trip.update(tripId, req.body);
-    res.json(trip);
-  } catch (err) {
-    console.error("Error updating trip:", err);
-    res.status(500).json({ error: "Failed to update trip" });
-  }
+    // Grab the first route param dynamically
+    const paramKey = Object.keys(req.params)[0];
+    const tripId = req.params[paramKey];
+    console.log("Updating trip with ID:", tripId);
+
+    try {
+        const updatedTrip = await Trip.update(tripId, req.body);
+        if (!updatedTrip) return res.status(404).json({ error: "Trip not found" });
+        res.json(updatedTrip);
+    } catch (err) {
+        console.error("Error updating trip:", err);
+        res.status(500).json({ error: "Failed to update trip" });
+    }
 };
 
 // 🟢 Delete a trip
@@ -99,14 +123,23 @@ export const addDay = async (req, res) => {
 
 // Update a day
 export const updateDay = async (req, res) => {
-  try {
-    const { dayId } = req.params;
-    const updatedDay = await Day.update(dayId, req.body);
-    res.json(updatedDay);
-  } catch (err) {
-    console.error("Error updating day:", err);
-    res.status(500).json({ error: "Failed to update day" });
-  }
+    try {
+        const { dayId } = req.params;
+        const updates = req.body;
+
+        console.log(`Updating day with ID: ${dayId}`);
+
+        const updatedDay = await Day.update(dayId, updates);
+
+        if (!updatedDay) {
+            return res.status(404).json({ error: 'Day not found' });
+        }
+
+        res.json(updatedDay);
+    } catch (err) {
+        console.error('Error updating day:', err);
+        res.status(500).json({ error: 'Failed to update day' });
+    }
 };
 
 // Remove day

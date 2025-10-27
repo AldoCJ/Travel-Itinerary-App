@@ -1,18 +1,23 @@
 import express from "express"
 import {
     getUser,
-    deleteUser
+    deleteUser,
+    getAllUsers,
+    updateUser
 } from "../controllers/UserController.js";
 
 const router = express.Router();
 
+
+// Get All Users route
+router.get("/", getAllUsers);
+
+// By ID routes
 router.route("/:id")
     .get(getUser)
-    .put((req, res) => {
-        console.log("Updating user with ID: " + req.params.id);
-        res.send(`Update User with ID ${req.params.id}`)
-    })
+    .put(updateUser)
     .delete(deleteUser);
+
 
 // middleware
 
@@ -20,4 +25,5 @@ router.param("id", (req, res, next, id) => {
     console.log("Requesting user with ID: " + id);
     next();
 })
+
 export default router;
