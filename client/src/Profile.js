@@ -1,6 +1,7 @@
 import './App.css';
 import { NavLink } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import TripGrid from './Components/TripGrid';
 
 function Profile() {
     // Mock user data - replace with API call
@@ -74,7 +75,7 @@ function Profile() {
 
     return (
         <div className="Profile">
-            <NavLink to="/" className="back-button-clean">← Home</NavLink>
+            <NavLink to="/Home" className="back-button-clean">← Home</NavLink>
             
             <div className="profile-container">
                 {/* Profile Info Section */}
@@ -121,39 +122,8 @@ function Profile() {
                     </div>
                 </div>
 
-                {/* Posts Grid */}
-                <div className="posts-section">
-                    <div className="posts-header">
-                        <h4>Trips</h4>
-                        {user.isOwnProfile && (
-                            <NavLink to="/create-itinerary" className="create-post-btn-small">
-                                + Create
-                            </NavLink>
-                        )}
-                    </div>
-
-                    <div className="posts-grid">
-                        {posts.map(post => (
-                            <div key={post.id} className="post-card-small">
-                                <NavLink to={`/itinerary/${post.id}`} className="post-link">
-                                    <div className="post-thumbnail-small">
-                                        <img src={post.thumbnail} alt={post.title} />
-                                        <div className="post-overlay">
-                                            <span className="post-stats">
-                                                ❤️ {post.likes}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="post-info-small">
-                                        <h4 className="post-title-small">{post.title}</h4>
-                                        <p className="post-destination-small">{post.destination}</p>
-                                        <p className="post-duration-small">{post.duration}</p>
-                                    </div>
-                                </NavLink>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                <TripGrid posts={posts} isOwnProfile={user.isOwnProfile} />
+                
             </div>
         </div>
     );

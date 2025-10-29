@@ -1,3 +1,15 @@
+/* Prevent horizontal overflow and use border-box sizing */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+}
+
 .App{
     min-height: 100vh;
     background-color: #282c34;
@@ -35,42 +47,175 @@
     border-width: 10px;
     border-radius: 10px;
     background-color: #282c34;
-    opacity:75%;
-}
-.side {
-    display: flex;
-    flex-direction: column;
-    width: 5%;
-    padding: 10px;
-/*    background-color: #282c34;*/
-    height: 96vh;
-}
-.btn1, .btn2, .btn3, .btn4{
-    height: 70px;
-    width: 100px;
-}
-.btn1 {
-    background-image: url(/img/pfp.png);
-    background-size: 100%;
-    background-repeat: no-repeat;
-    font-size:xx-large;
+    opacity: 0.75; /* translucent look preserved for the login container */
 }
 .link {
     opacity: 0;
 }
 
+/* Header banner styles */
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 20px;
+    height: 64px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    z-index: 1000;
+}
+
+.header-left,
+.header-center,
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.header-left {
+    flex: 0 0 auto;
+    align-items: center;
+}
+
+.header-center {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 0 12px;
+}
+
+.header-right {
+    flex: 0 0 auto;
+}
+
+/* Side button (moved into header) */
+.app-header .side-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-right: 12px;
+    border-radius: 50%;
+    overflow: hidden;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.app-header .side-pfp {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.app-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c2826;
+}
+
+.search-input {
+    width: 420px;
+    max-width: 60%;
+    min-width: 120px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(44, 40, 38, 0.12);
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    outline: none;
+    font-size: 14px;
+    color: #2c2826;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.search-input:focus {
+    border-color: rgba(0, 149, 246, 0.7);
+    box-shadow: 0 4px 16px rgba(0, 149, 246, 0.08);
+}
+
+.profile-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+/* header-specific override so the global .profile-image used on the profile page remains unchanged */
+.app-header .profile-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Ensure homepage main content doesn't sit under fixed header */
+.home-main {
+    padding-top: 84px; /* header height (64) + breathing room */
+}
+
+/* Responsive adjustments */
+@media (max-width: 800px) {
+    .search-input {
+        max-width: 60%;
+        width: 260px;
+    }
+    .app-title {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .search-input {
+        width: 160px;
+    }
+    .app-header {
+        height: 56px;
+        padding: 6px 12px;
+    }
+}
+
 /* Profile Page Styles */
+/* prevent horizontal scroll on profile page */
 .Profile {
     min-height: 100vh;
     padding: 0;
     position: relative;
+    overflow-x: hidden;
 }
 
+/* Use percent-based width (not 100vw) so padding doesn't cause overflow */
+.profile-container {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    background: rgba(255, 255, 255, 0.486);
+    backdrop-filter: blur(10px);
+    border-radius: 0;
+    padding: 20px 40px 40px 40px; 
+    box-shadow: none;
+    box-sizing: border-box;
+}
 
+/* Fixed-position back/home button — placed below header */
 .back-button-clean {
     position: absolute; 
-    top: 70px; 
-    right: 60px; 
+    top: 84px; /* header height (64) + 20px spacing */
+    right: 20px; 
     text-decoration: none;
     color: #2c2826; 
     font-weight: 500;
@@ -91,15 +236,14 @@
     transform: translateY(-1px);
 }
 
-.profile-container {
-    width: 100vw;
-    min-height: 100vh;
-    margin: 0;
-    background: rgba(255, 255, 255, 0.486);
-    backdrop-filter: blur(10px);
-    border-radius: 0;
-    padding: 20px 40px 40px 40px; 
-    box-shadow: none;
+/* Small-screen tweak so the button doesn't run off-screen */
+@media (max-width: 520px) {
+    .back-button-clean {
+        top: 72px;
+        right: 12px;
+        padding: 6px 10px;
+        font-size: 12px;
+    }
 }
 
 .profile-info {
@@ -267,6 +411,7 @@
     transform: translateY(-1px);
 }
 
+/* Grid & card layout */
 .posts-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -274,6 +419,21 @@
     max-height: none;
     overflow-y: visible;
     padding: 0 20px;
+    box-sizing: border-box;
+}
+
+/* Responsive grid columns to avoid horizontal scrolling on small viewports */
+@media (max-width: 1000px) {
+    .posts-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (max-width: 620px) {
+    .posts-grid {
+        grid-template-columns: 1fr;
+        padding: 0 12px;
+        gap: 16px;
+    }
 }
 
 .post-card-small {
