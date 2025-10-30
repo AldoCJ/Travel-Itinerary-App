@@ -15,7 +15,7 @@ function TripGrid({ posts, isOwnProfile }) {
             <div className="posts-grid">
                 {posts.map(post => (
                     <div key={post.id} className="post-card-small">
-                        <NavLink to={`/itinerary/${post.id}`} className="post-link">
+                        <NavLink to={`/itinerary/${post.id}`} state={{ trip: post }} className="post-link">
                             <div className="post-thumbnail-small">
                                 <img src={post.thumbnail} alt={post.title} />
                                 <div className="post-overlay">
