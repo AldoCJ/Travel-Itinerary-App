@@ -2,6 +2,7 @@ import './App.css';
 import Login from './Components/Login';
 import Profile from './Profile';
 import Home from './Home';
+import TripPage from './Components/TripPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import TestAPI from './TestAPI';
 
@@ -15,10 +16,10 @@ function App() {
                       <Route path="/Home" element={<Home />} />
                       <Route path="/Profile" element={<Profile />} />
                       <Route path="/TestAPI" element={<TestAPI />} />
+                      <Route path="/itinerary/:id" element={<TripPage />} />
                     </Routes>
                 </BrowserRouter>
             </div>
-          {/*<Side />*/}
         </div>
   );
 } 

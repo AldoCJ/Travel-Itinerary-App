@@ -25,5 +25,6 @@ client/yarn-error.log*
 
 # SERVER ~~~~~~~~~~~~~~~~~~~~~~~~~
 server/node_modules
+server/.env.vs
 server/.env
 /.vs
