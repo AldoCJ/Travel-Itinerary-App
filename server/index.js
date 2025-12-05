@@ -5,6 +5,7 @@ import pool from "./database.js";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import tripRoutes from "./routes/tripRoutes.js";
+import errorHandler from "./middleware/errorHandler.js";
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ const requireAuth = async (req, res, next) => {
 app.use("/auth", authRoutes);
 app.use("/trips", tripRoutes);
 app.use("/users", userRoutes);
+app.use(errorHandler);
 app.use(requireAuth); // Apply authentication middleware globally except for auth routes
 
 app.listen(PORT, () => {
