@@ -39,7 +39,7 @@ app.use("/auth", authRoutes);
 app.use("/trips", tripRoutes);
 app.use("/users", userRoutes);
 app.use(errorHandler);
-app.use(requireAuth); // Apply authentication middleware globally except for auth routes
+//app.use(requireAuth); // Apply authentication middleware globally except for auth routes
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
@@ -49,4 +49,12 @@ process.on("SIGINT", async () => {
   console.log("Shutting down server...");
   await pool.end();
   process.exit(0);
+});
+
+process.on("unhandledRejection", err => {
+    console.error("UNHANDLED REJECTION:", err);
+});
+
+process.on("uncaughtException", err => {
+    console.error("UNCAUGHT EXCEPTION:", err);
 });
