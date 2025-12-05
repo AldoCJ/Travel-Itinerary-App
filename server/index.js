@@ -48,3 +48,12 @@ process.on("SIGINT", async () => {
   await pool.end();
   process.exit(0);
 });
+
+process.on("unhandledRejection", err => {
+  console.error("UNHANDLED REJECTION:", err);
+});
+
+process.on("uncaughtException", err => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
