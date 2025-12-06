@@ -1,6 +1,6 @@
-import * as Trip from '../models/Trip.js';
-import * as Day from '../models/Day.js';
-import * as Event from '../models/Event.js';
+import * as Trip from '../models/Trip2.js';
+import * as Day from '../models/Day2.js';
+import * as Event from '../models/Event2.js';
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // -------------------- Trip Controllers -------------------- //

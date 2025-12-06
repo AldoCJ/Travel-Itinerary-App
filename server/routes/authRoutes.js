@@ -1,5 +1,5 @@
 import express from "express";
-import { supabase, supabaseAdmin } from "../supabaseClient.js";
+import { getSupabaseClient, getSupabaseAdminClient } from "../supabaseClient.js";
 
 const router = express.Router();
 
@@ -13,7 +13,9 @@ router.post("/signup", async (req, res) => {
         return res.status(400).json({ error: "Email and password are required" });
     }
 
-    // Sign up user with Supabase
+    const supabase = getSupabaseClient();
+    const supabaseAdmin = getSupabaseAdminClient();
+    
     const { data, error } = await supabase.auth.signUp({
         email,
         password
@@ -48,6 +50,8 @@ router.post("/signin", async (req, res) => {
         console.error("Signin error: Missing email or password");
         return res.status(400).json({ error: "Email and password are required" });
     }
+
+    const supabase = getSupabaseClient();
 
     const { data, error } = await supabase.auth.signInWithPassword({
         email,
