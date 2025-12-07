@@ -1,204 +1,267 @@
-import * as Trip from '../models/Trip.js';
-import * as Day from '../models/Day.js';
-import * as Event from '../models/Event.js';
+import * as Trip from '../models/Trip2.js';
+import * as Day from '../models/Day2.js';
+import * as Event from '../models/Event2.js';
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 // -------------------- Trip Controllers -------------------- //
 
-export const createTrip = async (req, res) => {
-  try {
-    const tripData = req.body;
-    const newTrip = await Trip.create(tripData);
+// Create trip
+export const createTrip = asyncHandler(async (req, res) => {
+    const {
+        user_id,
+        title,
+        summary,
+        start_date,
+        end_date,
+        number_of_people,
+        total_price
+    } = req.body;
+
+    // Error checking for required fields
+    if (!user_id) {
+        res.status(400);
+        throw new Error("user_id is required");
+    }
+    if (!title) {
+        res.status(400);
+        throw new Error("title is required");
+    }
+    if (!start_date) {
+        res.status(400);
+        throw new Error("start_date is required");
+    }
+    if (!end_date) {
+        res.status(400);
+        throw new Error("end_date is required");
+    }
+    if (!number_of_people) {
+        res.status(400);
+        throw new Error("number_of_people is required");
+    }
+    if (!total_price) {
+        res.status(400);
+        throw new Error("total_price is required");
+    }
+
+    const newTrip = await Trip.create(req.body);
     res.status(201).json(newTrip);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create trip' });
-  }
-};
+});
 
-export const getTrip = async (req, res) => {
-  try {
+// Get trip by id
+export const getTrip = asyncHandler(async (req, res) => {
     const tripId = req.params.tripId;
-    const trip = await Trip.getById(tripId);
-    if (!trip) {
-      return res.status(404).json({ error: 'Trip not found' });
+    if (!tripId) {
+        res.status(400);
+        throw new Error("tripId is required");
     }
 
-    res.json(trip);
-
-    } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve trip' });
-  }
-};
-
-export const getAllTrips = async (req, res) => {
-    try {
-        console.log("Fetching all trips...");
-
-        // Optional filters via query parameters
-        const filters = {
-            userId: req.query.userId || null,
-            location: req.query.location || null,
-        };
-
-        const trips = await Trip.getAll(filters);
-
-        res.status(200).json(trips);
-    } catch (error) {
-        console.error("Error fetching trips:", error);
-        res.status(500).json({ error: "Failed to fetch trips" });
-    }
-};
-
-export const getTripDetails = async (req, res) => {
-  try {
-    const tripId = req.params.tripId;
     const trip = await Trip.getById(tripId);
     if (!trip) {
-      return res.status(404).json({ error: 'Trip not found' });
+        return res.status(404);
+        throw new Error('Trip not found');
+    }
+
+    res.status(200).json(trip);
+});
+
+// Get all trips
+export const getAllTrips = asyncHandler(async (req, res) => {
+    const filters = {
+        userId: req.query.userId || null,
+        location: req.query.location || null,
+    };
+
+    const trips = await Trip.getAll(filters);
+
+    res.status(200).json(trips);
+});
+
+// Get full trip details by id
+export const getTripDetails = asyncHandler(async (req, res) => {
+    const tripId = req.params.tripId;
+    if (!tripId) {
+        res.status(400);
+        throw new Error("tripId is required");
+    }
+
+    const trip = await Trip.getById(tripId);
+    if (!trip) {
+        res.status(404);
+        throw new Error("Trip not found")
     }
 
     const days = await Day.getByTripId(tripId);
-    for (let day of days) {
-      const events = await Event.getByDayId(day.id);
-      day.events = events;
-    }
 
-    res.json({ trip, days });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve trip details' });
-  }
-};
+    // Fetch events for each day in parallel
+    const daysWithEvents = await Promise.all(
+        days.map(async (day) => {
+            const events = await Event.getAll(day.id);
+            return { ...day, events };
+        })
+    );
 
-export const getUserTrips = async (req, res) => {
-  try {
+    res.status(200).json({ trip, days: daysWithEvents });
+});
+
+// Get trips by user id
+export const getUserTrips = asyncHandler(async (req, res) => {
     const userId = req.params.userId;
-    const trips = await Trip.getByUserId(userId);
-    res.json(trips);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve user trips' });
-  }
-};
-
-// 🟢 Update a trip
-export const updateTrip = async (req, res) => {
-    try {
-        const { tripId } = req.params;
-        console.log(`Updating trip with ID: ${tripId}`);
-        console.log(`Request body:`, req.body);
-
-        if (!tripId) {
-            return res.status(400).json({ error: "Trip ID is required" });
-        }
-
-        const updatedTrip = await Trip.update(tripId, req.body);
-
-        if (!updatedTrip) {
-            return res.status(404).json({ error: "Trip not found" });
-        }
-
-        res.status(200).json({
-            message: "Trip updated successfully",
-            trip: updatedTrip
-        });
-    } catch (err) {
-        console.error("Error updating trip:", err);
-        res.status(500).json({ error: "Internal Server Error" });
+    if (!userId) {
+        res.status(400);
+        throw new Error("userId is required");
     }
-};
 
-// 🟢 Delete a trip
-export const deleteTrip = async (req, res) => {
-  try {
+    const trips = await Trip.getByUserId(userId);
+    res.status(200).json(trips);
+});
+
+// Update a trip
+// ***Error checking needs to be revised***
+export const updateTrip = asyncHandler(async (req, res) => {
     const { tripId } = req.params;
-    await Trip.remove(tripId);
-    res.json({ message: "Trip deleted successfully" });
-  } catch (err) {
-    console.error("Error deleting trip:", err);
-    res.status(500).json({ error: "Failed to delete trip" });
-  }
-};
+    const fields = req.body;
+
+    if (!tripId) {
+        res.status(400);
+        throw new Error("tripId is required");
+    }
+
+    const requiredFields = ["title", "summary", "start_date", "end_date"];
+
+    for (const field of requiredFields) {
+        if (field in fields) {
+            if (
+                fields[field] === "" ||
+                fields[field] === null ||
+                fields[field] === undefined
+            ) {
+                res.status(400);
+                throw new Error(`Field "${field}" cannot be empty`);
+            }
+        }
+    }
+
+    const updatedTrip = await Trip.update(tripId, fields);
+
+    if (!updatedTrip) {
+        res.status(404);
+        throw new Error("Trip not found");
+    }
+
+    res.status(200).json(updatedTrip);
+});
+
+// Delete a trip
+export const deleteTrip = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
+    if (!tripId) {
+        res.status(400);
+        throw new Error("tripId is required");
+    }
+
+    const msg = await Trip.remove(tripId);
+    res.status(200).json({ message: msg });
+});
 
 // -------------------- Day Controllers -------------------- //
 
 // 🟢 Add a day to a trip
-export const addDay = async (req, res) => {
-  try {
+export const addDay = asyncHandler(async (req, res) => {
     const { tripId } = req.params;
-    const day = await Day.create({ trip_id: tripId, ...req.body });
+    const data = req.body;
+    if (!tripId) {
+        res.status(400);
+        throw new Error("tripId is required");
+    }
+
+    if (!data.date || data.date.trim() === "") {
+        res.status(400);
+        throw new Error("Field \"date\" is required anc cannot be empty");
+    }
+
+    const day = await Day.create({ trip_id: tripId, ...data });
     res.status(201).json(day);
-  } catch (err) {
-    console.error("Error adding day:", err);
-    res.status(500).json({ error: "Failed to add day" });
-  }
-};
+});
 
 // Get All Days from Trip
-export const getAllDays = async (req, res) => {
-    try {
-        const { tripId } = req.params;
-        const days = await Day.getAll(tripId);
-        if (!days.length) {
-            return res.status(404).json({ message: "No days found for this trip" });
-        }
-        res.status(200).json(days);
-    } catch (error) {
-        console.error("Error fetching days:", error);
-        res.status(500).json({ error: "Failed to retrieve days" });
+export const getAllDays = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
+    if (!tripId) {
+        res.status(400);
+        throw new Error("tripdId is required");
     }
-};
+
+    const days = await Day.getAll(tripId);
+    if (!days.length) {
+        res.status(404);
+        throw new Error("No days found for this trip");
+    }
+
+    res.status(200).json(days);
+});
 
 // Get Day by ID
-export const getDay = async (req, res) => {
-    try {
-        const { dayId } = req.params;
-        const day = await Day.getById(dayId);
-        if (!day) {
-            return res.status(404).json({ message: "Day not found" });
-        }
-        res.status(200).json(day);
-    } catch (error) {
-        console.error("Error fetching day:", error);
-        res.status(500).json({ error: "Failed to retrieve day" });
+export const getDay = asyncHandler(async (req, res) => {
+    const { dayId } = req.params;
+    if (!dayId) {
+        res.status(400);
+        throw new Error("dayId is required");
     }
-};
+
+    const day = await Day.getById(dayId);
+    if (!day) {
+        res.status(404);
+        throw new Error("Dat not found");
+    }
+    res.status(200).json(day);
+});
 
 // Update a day
-export const updateDay = async (req, res) => {
-    try {
-        const { tripId, dayId } = req.params;
-        console.log(`Updating day with ID: ${dayId} for trip ${tripId}`);
-        console.log(`Request body:`, req.body);
+export const updateDay = asyncHandler(async (req, res) => {
+    const { dayId } = req.params;
+    const fields = req.body;
 
-        if (!dayId) {
-            return res.status(400).json({ error: "Day ID is required" });
-        }
-
-        const updatedDay = await Day.update(dayId, req.body);
-
-        if (!updatedDay) {
-            return res.status(404).json({ error: "Day not found or no valid fields provided" });
-        }
-
-        res.status(200).json({
-            message: "Day updated successfully",
-            day: updatedDay
-        });
-    } catch (err) {
-        console.error("Error updating day:", err);
-        res.status(500).json({ error: "Internal Server Error" });
+    if (!dayId) {
+        res.status(400);
+        throw new Error("Day ID is required");
     }
-};
+
+    const requiredFields = ["date"];
+
+    for (const field of requiredFields) {
+        if (field in fields) {
+            if (
+                fields[field] === "" ||
+                fields[field] === null ||
+                fields[field] === undefined
+            ) {
+                res.status(400);
+                throw new Error(`Field "${field}" cannot be empty`);
+            }
+        }
+    }
+
+    const updatedDay = await Day.update(dayId, fields);
+
+    if (!updatedDay) {
+        res.status(404);
+        throw new Error("Day not found");
+    }
+
+    res.status(200).json(updated);
+});
 
 // Remove day
-export const removeDay = async (req, res) => {
-  try {
+export const removeDay = asyncHandler(async (req, res) => {
     const { dayId } = req.params;
-    await Day.remove(dayId);
-    res.json({ message: "Day removed successfully" });
-  } catch (err) {
-    console.error("Error removing day:", err);
-    res.status(500).json({ error: "Failed to remove day" });
-  }
-};
+    if (!dayId) {
+        res.status(400);
+        throw new Error("Day ID is required");
+    }
+
+    const msg = await Day.remove(dayId);
+    res.status(200).json({ message: msg });
+});
 
 // -------------------- Event Controllers -------------------- //
 
