@@ -37,7 +37,7 @@ export const update = async (id, updates) => {
   if (!updates || Object.keys(updates).length === 0) return null;
 
   // Optional: whitelist allowed fields
-  const allowedFields = ["name", "email", "avatar_url", "bio"];
+  const allowedFields = ["name", "profile_pic_url", "about_me"];
   const updateObject = {};
 
   for (const [key, value] of Object.entries(updates)) {

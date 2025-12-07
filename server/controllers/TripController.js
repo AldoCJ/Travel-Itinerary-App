@@ -2,6 +2,7 @@ import * as Trip from '../models/Trip2.js';
 import * as Day from '../models/Day2.js';
 import * as Event from '../models/Event2.js';
 import { asyncHandler } from "../utils/asyncHandler.js";
+import cloudinary from '../utils/cloudinary.js';
 
 // -------------------- Trip Controllers -------------------- //
 
@@ -148,6 +149,36 @@ export const updateTrip = asyncHandler(async (req, res) => {
         throw new Error("Trip not found");
     }
 
+    res.status(200).json(updatedTrip);
+});
+
+export const updateTripPicture = asyncHandler(async (req, res) => {
+    const { tripId } = req.params;
+
+    if (!tripId) {
+        res.status(400);
+        throw new Error("tripId is required");
+    }
+
+    if (!req.file) {
+        res.status(400);
+        throw new Error("No file uploaded");
+    }
+
+    const filePath = req.file.path;
+
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(filePath, {
+                folder: "trip_photos",
+                public_id: `trip_${tripId}_photo`,
+                overwrite: true,
+                width: 1920,
+                height: 1080,
+                crop: "limit",
+                resource_type: "image"
+            });
+
+    const updatedTrip = await Trip.update(tripId, { photo_url: result.secure_url });
     res.status(200).json(updatedTrip);
 });
 

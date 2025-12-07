@@ -1,13 +1,15 @@
-import express from "express"
+import express from "express";
 import {
     getUser,
     deleteUser,
     getAllUsers,
-    updateUser
+    updateUser,
+    updateUserProfilePicture
 } from "../controllers/UserController.js";
 
-const router = express.Router();
+import upload from "../middleware/multerUpload.js";
 
+const router = express.Router();
 
 // Get All Users route
 router.get("/", getAllUsers);
@@ -18,12 +20,6 @@ router.route("/:id")
     .patch(updateUser)
     .delete(deleteUser);
 
-
-// middleware
-
-router.param("id", (req, res, next, id) => {
-    console.log("Requesting user with ID: " + id);
-    next();
-})
+router.patch("/:id/pfp", upload.single("pfp"), updateUserProfilePicture);
 
 export default router;
