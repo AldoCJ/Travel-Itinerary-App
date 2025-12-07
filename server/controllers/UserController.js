@@ -1,4 +1,4 @@
-import * as User from "../models/User.js";
+import * as User from "../models/User2.js";
 
 // 🟢 Get a user by ID
 export const getUser = async (req, res) => {
@@ -36,10 +36,9 @@ export const getAllUsers = async (req, res) => {
 };
 
 // Update a User Profile (Public Data Only)
-// HAVE TO DISABLE AUTH FROM INDEX.JS FIRST (UNTIL AUTH IS IMPLEMENTED IN ROUTES)
 export const updateUser = async (req, res) => {
     try {
-        const { id } = req.params;  // User ID passed in the URL
+        const { id } = req.params;  
         const updates = req.body;
 
         if (!id) {

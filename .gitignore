@@ -27,3 +27,4 @@ client/yarn-error.log*
 server/node_modules
 server/.env.vs
 server/.env
+/.vs

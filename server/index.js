@@ -1,10 +1,11 @@
 import express from "express";
 import dotenv from "dotenv";
-import { supabase } from "./supabaseClient.js"; // import your Supabase client
+import { getSupabaseClient } from "./supabaseClient.js"; // import your Supabase client
 import pool from "./database.js";
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import tripRoutes from "./routes/tripRoutes.js";
+import errorHandler from "./middleware/errorHandler.js";
 
 dotenv.config();
 
@@ -23,6 +24,8 @@ const requireAuth = async (req, res, next) => {
         return res.status(401).json({ error: "Token missing" });
     }
 
+    const supabase = getSupabaseClient();
+
     const { user, error } = await supabase.auth.getUser(token);
     if (error || !user) {
         return res.status(401).json({ error: "Invalid or expired token" });
@@ -35,9 +38,13 @@ const requireAuth = async (req, res, next) => {
 
 // Routes
 app.use("/auth", authRoutes);
+
+//app.use(requireAuth); // Apply authentication middleware globally except for auth routes
+
 app.use("/trips", tripRoutes);
 app.use("/users", userRoutes);
-//app.use(requireAuth);
+app.use(errorHandler);
+
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
@@ -56,4 +63,6 @@ process.on("unhandledRejection", err => {
 process.on("uncaughtException", err => {
   console.error("UNCAUGHT EXCEPTION:", err);
 });
+
+
 

@@ -1,7 +1,7 @@
 // middleware/authMiddleware.js
 
 
-import {supabase} from "../supabaseClient.js";
+import {getSupabaseClient} from "../supabaseClient.js";
 
 export async function authMiddleware(req, res, next) {
   try {
@@ -10,6 +10,8 @@ export async function authMiddleware(req, res, next) {
     if (!token) {
       return res.status(401).json({ error: "Missing auth token" });
     }
+
+    const supabase = getSupabaseClient();
 
     // Verify token with Supabase
     const { data, error } = await supabase.auth.getUser(token);

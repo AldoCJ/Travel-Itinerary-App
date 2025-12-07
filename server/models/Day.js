@@ -42,7 +42,7 @@ export const create = async (data) => {
   return rows[0];
 };
 
-// 🟢 Update a day
+// Update a day
 export const update = async (dayId, fields) => {
     if (!dayId || !fields || Object.keys(fields).length === 0) {
         return null;
@@ -88,7 +88,7 @@ export const update = async (dayId, fields) => {
     return rows[0];
 };
 
-// 🟢 Delete a day
+// Delete a day
 export const remove = async (id) => {
   await pool.query(`DELETE FROM "Days" WHERE id = $1`, [id]);
   return { message: "Day deleted successfully" };

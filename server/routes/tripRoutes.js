@@ -1,7 +1,6 @@
 import express from 'express';
 import {
   createTrip,
-  getTrip,
   getAllTrips,
   getTripDetails,
   updateTrip,
