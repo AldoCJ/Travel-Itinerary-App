@@ -1,123 +1,150 @@
+// models/Event2.js
 import { getSupabaseAdminClient } from "../supabaseClient.js";
 
-// 🟢 Get all days for a trip
-export const getByTripId = async (tripId) => {
-  const supabase = getSupabaseAdminClient();
+// ---------------------------------------------------------
+// 🟢 Get all events for a specific Day
+// ---------------------------------------------------------
+export const getAll = async (dayId) => {
+    const supabase = getSupabaseAdminClient();
 
-  const { data, error } = await supabase
-    .from("Days")
-    .select("*")
-    .eq("trip_id", tripId)
-    .order("date", { ascending: true });
+    const { data, error } = await supabase
+        .from("Events")
+        .select("*")
+        .eq("day_id", dayId)
+        .order("time", { ascending: true });
 
-  if (error) throw error;
-  return data;
+    if (error) throw error;
+    return data;
 };
 
-// 🟢 Get all days (same as above)
-export const getAll = async (tripId) => {
-  const supabase = getSupabaseAdminClient();
+// ---------------------------------------------------------
+// 🟢 Get an event by ID
+// ---------------------------------------------------------
+export const getById = async (eventId) => {
+    const supabase = getSupabaseAdminClient();
 
-  const { data, error } = await supabase
-    .from("Days")
-    .select("*")
-    .eq("trip_id", tripId)
-    .order("date", { ascending: true });
+    const { data, error } = await supabase
+        .from("Events")
+        .select("*")
+        .eq("id", eventId)
+        .single();
 
-  if (error) throw error;
-  return data;
+    if (error) throw error;
+    return data;
 };
 
-// 🟢 Get a day by ID
-export const getById = async (id) => {
-  const supabase = getSupabaseAdminClient();
+// ---------------------------------------------------------
+// 🟢 Create a new event
+// ---------------------------------------------------------
+export const create = async (fields) => {
+    const supabase = getSupabaseAdminClient();
 
-  const { data, error } = await supabase
-    .from("Days")
-    .select("*")
-    .eq("id", id)
-    .single();
+    const {
+        day_id,
+        title,
+        notes = "",
+        location,
+        cost = 0,
+        time,
+        photo = null
+    } = fields;
 
-  if (error) throw error;
-  return data;
+    // Validate required fields (non-nullables in schema)
+    if (!day_id) throw new Error("day_id is required");
+    if (!title?.trim()) throw new Error("title is required");
+    if (!location?.trim()) throw new Error("location is required");
+    if (!time) throw new Error("time is required");
+
+    const { data, error } = await supabase
+        .from("Events")
+        .insert({
+            day_id,
+            title,
+            notes,
+            location,
+            cost,
+            time,
+            photo,
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
 };
 
-// 🟢 Create a day
-export const create = async (data) => {
-  const supabase = getSupabaseAdminClient();
+// ---------------------------------------------------------
+// 🟢 Update an event
+// ---------------------------------------------------------
+export const update = async (eventId, fields) => {
+    const supabase = getSupabaseAdminClient();
 
-  const {
-    trip_id,
-    date,
-    summary = "",
-    lodging,
-    lodging_cost = 0,
-    transport_cost = 0,
-  } = data;
-
-  const { data: newDay, error } = await supabase
-    .from("Days")
-    .insert({
-      trip_id,
-      date,
-      summary,
-      lodging,
-      lodging_cost,
-      transport_cost,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return newDay;
-};
-
-// 🟢 Update a day
-export const update = async (dayId, fields) => {
-  const supabase = getSupabaseAdminClient();
-
-  if (!dayId || !fields || Object.keys(fields).length === 0) {
-    return null;
-  }
-
-  const allowedFields = [
-    "date",
-    "summary",
-    "lodging",
-    "lodging_cost",
-    "transport_cost",
-  ];
-
-  const updateObject = {};
-
-  for (const [key, value] of Object.entries(fields)) {
-    if (allowedFields.includes(key)) {
-      updateObject[key] = value;
+    if (!eventId) throw new Error("eventId is required");
+    if (!fields || Object.keys(fields).length === 0) {
+        throw new Error("No fields provided for update");
     }
-  }
 
-  if (Object.keys(updateObject).length === 0) return null;
+    // Only allow valid updatable fields
+    const allowedFields = [
+        "title",
+        "notes",
+        "location",
+        "cost",
+        "time",
+        "photo",
+    ];
 
-  updateObject.updated_at = new Date();
+    const updateObject = {};
 
-  const { data, error } = await supabase
-    .from("Days")
-    .update(updateObject)
-    .eq("id", dayId)
-    .select()
-    .single();
+    // filter only allowed keys
+    for (const [key, value] of Object.entries(fields)) {
+        if (allowedFields.includes(key)) {
+            updateObject[key] = value;
+        }
+    }
 
-  if (error) throw error;
-  return data;
+    if (Object.keys(updateObject).length === 0) {
+        throw new Error("No valid fields provided for update");
+    }
+
+    // Required fields must not be updated to empty values
+    if (updateObject.title !== undefined && !updateObject.title.trim()) {
+        throw new Error("title cannot be empty");
+    }
+
+    if (updateObject.location !== undefined && !updateObject.location.trim()) {
+        throw new Error("location cannot be empty");
+    }
+
+    if (updateObject.time !== undefined && updateObject.time === "") {
+        throw new Error("time cannot be empty");
+    }
+
+    updateObject.updated_at = new Date();
+
+    const { data, error } = await supabase
+        .from("Events")
+        .update(updateObject)
+        .eq("id", eventId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
 };
 
-// 🟢 Delete a day
-export const remove = async (id) => {
-  const supabase = getSupabaseAdminClient();
+// ---------------------------------------------------------
+// 🟢 Delete an event
+// ---------------------------------------------------------
+export const remove = async (eventId) => {
+    const supabase = getSupabaseAdminClient();
 
-  const { error } = await supabase.from("Days").delete().eq("id", id);
+    const { error } = await supabase
+        .from("Events")
+        .delete()
+        .eq("id", eventId);
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return { message: "Day deleted successfully" };
+    return { message: "Event deleted successfully" };
 };
