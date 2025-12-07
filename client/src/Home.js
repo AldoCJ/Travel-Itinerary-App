@@ -1,69 +1,43 @@
 import './App.css';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import Header from './Components/Header';
 import TripGrid from './Components/TripGrid';
 
 function Home() {
-    const [posts] = useState([
-        {
-            id: 1,
-            title: 'Tokyo Adventure',
-            destination: 'Tokyo, Japan',
-            duration: '7 days',
-            thumbnail: '/public-imgs/tokyopic.png',
-            likes: 156,
-            date: '2024-10-15'
-        },
-        {
-            id: 2,
-            title: 'NYC Exploration',
-            destination: 'New York, USA',
-            duration: '5 days',
-            thumbnail: '/public-imgs/nyc.png',
-            likes: 203,
-            date: '2024-09-10'
-        },
-        {
-            id: 3,
-            title: 'Paris Romance',
-            destination: 'Paris, France',
-            duration: '8 days',
-            thumbnail: '/public-imgs/paris.png',
-            likes: 187,
-            date: '2024-08-20'
-        },
-        {
-            id: 4,
-            title: 'Portland Vibes',
-            destination: 'Portland, Oregon',
-            duration: '4 days',
-            thumbnail: '/public-imgs/portland.png',
-            likes: 142,
-            date: '2024-07-15'
-        },
-        {
-            id: 5,
-            title: 'Seoul Discovery',
-            destination: 'Seoul, South Korea',
-            duration: '10 days',
-            thumbnail: '/public-imgs/seoul.png',
-            date: '2024-06-10'
-        },
-        {
-            id: 6,
-            title: 'Brazil Adventure',
-            destination: 'Brazil',
-            duration: '14 days',
-            thumbnail: '/public-imgs/brazil.png',
-            likes: 198,
-            date: '2024-05-05'
-        }
-    ]);
-
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [query, setQuery] = useState('');
+
+    useEffect(() => {
+        axios.get('/api/trips')
+            .then((res) => {
+                // Map API data to match the format your TripGrid expects
+                const formattedPosts = res.data.map(trip => ({
+                    id: trip.id,
+                    title: trip.title,
+                    destination: trip.summary, // or wherever you want
+                    duration: `${trip.start_date.slice(0, 10)} → ${trip.end_date.slice(0, 10)}`,
+                    thumbnail: '/public-imgs/tokyopic.png', // placeholder if API has no image
+                    likes: trip.number_of_people, // or another field if you have
+                    date: trip.start_date.slice(0, 10)
+                }));
+                setPosts(formattedPosts);
+                setLoading(false);
+            })
+            .catch((err) => {
+                setError(err.message);
+                setLoading(false);
+            });
+    }, []);
+
     const filteredPosts = posts.filter(post =>
         post.title.toLowerCase().includes(query.toLowerCase())
     );
+
+    if (loading) return <h3>Loading trips...</h3>;
+    if (error) return <h3>Error: {error}</h3>;
 
     return (
         <>
@@ -74,4 +48,5 @@ function Home() {
         </>
     );
 }
+
 export default Home;

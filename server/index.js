@@ -57,9 +57,12 @@ process.on("SIGINT", async () => {
 });
 
 process.on("unhandledRejection", err => {
-    console.error("UNHANDLED REJECTION:", err);
+  console.error("UNHANDLED REJECTION:", err);
 });
 
 process.on("uncaughtException", err => {
-    console.error("UNCAUGHT EXCEPTION:", err);
+  console.error("UNCAUGHT EXCEPTION:", err);
 });
+
+
+
