@@ -5,6 +5,12 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import cloudinary from '../utils/cloudinary.js';
 import fs from 'fs';
 
+// Helper functiion: Check empty strings/null/undefined
+const isEmpty = (value) =>
+    value === undefined ||
+    value === null ||
+    (typeof value === "string" && value.trim() === "");
+
 // -------------------- Trip Controllers -------------------- //
 
 // Create trip
@@ -118,7 +124,6 @@ export const getUserTrips = asyncHandler(async (req, res) => {
 });
 
 // Update a trip
-// ***Error checking needs to be revised***
 export const updateTrip = asyncHandler(async (req, res) => {
     const { tripId } = req.params;
     const fields = req.body;
@@ -128,7 +133,7 @@ export const updateTrip = asyncHandler(async (req, res) => {
         throw new Error("tripId is required");
     }
 
-    const requiredFields = ["title", "summary", "start_date", "end_date"];
+    const requiredFields = ["title", "start_date", "end_date", "number_of_people", "total_price"];
 
     for (const field of requiredFields) {
         if (field in fields) {
@@ -206,7 +211,7 @@ export const deleteTrip = asyncHandler(async (req, res) => {
 
 // -------------------- Day Controllers -------------------- //
 
-// 🟢 Add a day to a trip
+// Add a day to a trip
 export const addDay = asyncHandler(async (req, res) => {
     const { tripId } = req.params;
     const data = req.body;
@@ -252,7 +257,7 @@ export const getDay = asyncHandler(async (req, res) => {
     const day = await Day.getById(dayId);
     if (!day) {
         res.status(404);
-        throw new Error("Dat not found");
+        throw new Error("Day not found");
     }
     res.status(200).json(day);
 });
@@ -289,7 +294,7 @@ export const updateDay = asyncHandler(async (req, res) => {
         throw new Error("Day not found");
     }
 
-    res.status(200).json(updated);
+    res.status(200).json(updatedDay);
 });
 
 // Remove day
@@ -306,70 +311,109 @@ export const removeDay = asyncHandler(async (req, res) => {
 
 // -------------------- Event Controllers -------------------- //
 
-export const getAllEvents = async (req, res) => {
-    try {
-        const { dayId } = req.params;
-        const events = await Event.getAll(dayId);
-
-        if (!events.length) {
-            return res.status(404).json({ message: "No events found for this day" });
-        }
-
-        res.status(200).json(events);
-    } catch (error) {
-        console.error("Error fetching events:", error);
-        res.status(500).json({ error: "Failed to retrieve events" });
+export const getAllEvents = asyncHandler(async (req, res) => {
+    const { dayId } = req.params;
+    if (!dayId) {
+        res.status(400);
+        throw new Error("Day ID is required");
     }
-};
 
-export const getEvent = async (req, res) => {
-    try {
-        const { eventId } = req.params;
-        const event = await Event.getById(eventId);
+    const events = await Event.getAll(dayId);
 
-        if (!event) {
-            return res.status(404).json({ message: "Event not found" });
-        }
-
-        res.status(200).json(event);
-    } catch (error) {
-        console.error("Error fetching event:", error);
-        res.status(500).json({ error: "Failed to retrieve event" });
+    if (!events || events.length === 0) {
+        res.status(404);
+        throw new Error("No events found for this day.");
     }
-};
+
+    res.status(200).json(events);
+});
+
+export const getEvent = asyncHandler(async (req, res) => {
+    const { eventId } = req.params;
+    if (!eventId) {
+        res.status(400);
+        throw new Error("Event ID is required.");
+    }
+
+    const event = await Event.getById(eventId);
+
+    if (!event) {
+        res.status(404);
+        throw new Error("Event not found.");
+    }
+
+    res.status(200).json(event);
+});
 
 // Add an event to a day
-export const addEvent = async (req, res) => {
-  try {
+export const addEvent = asyncHandler(async (req, res) => {
     const { dayId } = req.params;
+    const { title, location, cost, time } = req.body;
+
+    if (isEmpty(title)) {
+        res.status(400);
+        throw new Error("Title is required.");
+    }
+
+    if (isEmpty(location)) {
+        res.status(400);
+        throw new Error("Location is required.");
+    }
+
+    if (cost !== undefined && (isNaN(cost) || cost === "")) {
+        res.status(400);
+        throw new Error("Cost must be a valid number.");
+    }
+
+    if (isEmpty(time)) {
+        res.status(400);
+        throw new Error("Time is required.");
+    }
+
     const event = await Event.create({ day_id : dayId, ...req.body });
     res.status(201).json(event);
-  } catch (err) {
-    console.error("Error adding event:", err);
-    res.status(500).json({ error: "Failed to add event" });
-  }
-};
+});
 
 // Update an event
-export const updateEvent = async (req, res) => {
-    try {
-        const { eventId } = req.params;
-        const updates = req.body;
+export const updateEvent = asyncHandler(async (req, res) => {
+    const { eventId } = req.params;
+    const fields = req.body;
 
-        console.log("Updating event:", eventId, updates);
-
-        const updatedEvent = await Event.update(eventId, updates);
-
-        if (!updatedEvent) {
-            return res.status(404).json({ error: "Event not found" });
-        }
-
-        res.status(200).json(updatedEvent);
-    } catch (error) {
-        console.error("Error updating event:", error);
-        res.status(500).json({ error: "Failed to update event" });
+    if (!eventId) {
+        res.status(400);
+        throw new Error("Event ID is required.");
     }
-};
+
+    const existing = await Event.getById(eventId);
+    if (!existing) {
+        res.status(404);
+        throw new Error("Event not found.");
+    }
+
+    const requiredFields = ["title", "location", "cost", "time"];
+
+    for (const field of requiredFields) {
+        if (field in fields) {
+            if (
+                fields[field] === "" ||
+                fields[field] === null ||
+                fields[field] === undefined
+            ) {
+                res.status(400);
+                throw new Error(`Field "${field}" cannot be empty`);
+            }
+        }
+    }
+
+    const updatedEvent = await Event.update(eventId, fields);
+
+    if (!updatedEvent) {
+        res.status(400);
+        throw new Error("Could not update event.");
+    }
+
+    res.status(200).json(updatedEvent);
+});
 
 export const updateEventPhoto = asyncHandler(async (req, res) => {
     const { eventId } = req.params;
@@ -408,13 +452,15 @@ export const updateEventPhoto = asyncHandler(async (req, res) => {
 });
 
 // Remove an event
-export const removeEvent = async (req, res) => {
-  try {
+export const removeEvent = asyncHandler(async (req, res) => {
     const { eventId } = req.params;
-    await Event.remove(eventId);
-    res.json({ message: "Event removed successfully" });
-  } catch (err) {
-    console.error("Error removing event:", err);
-    res.status(500).json({ error: "Failed to remove event" });
-  }
-};
+
+    const existing = await Event.getById(eventId);
+    if (!existing) {
+        res.status(404);
+        throw new Error("Event not found");
+    }
+
+    const msg = await Event.remove(eventId);
+    res.status(200).json({ message: msg });
+});
