@@ -78,22 +78,33 @@ export const create = async (data) => {
 
 // 🟢 Update an existing trip
 export const update = async (tripId, fields) => {
-  if (!tripId || !fields || Object.keys(fields).length === 0) {
-    return null;
-  }
+    if (!tripId || !fields || Object.keys(fields).length === 0) {
+        return null;
+    }
 
-  const { data, error } = await supabase
-    .from("Trips")
-    .update({
-      ...fields,
-      updated_at: new Date()
-    })
-    .eq("id", tripId)
-    .select()
-    .single();
+    const allowedFields = ["title", "summary", "start_date", "end_date", "number_of_people", "total_price", "photo_url"];
+    const updateFields = {};
 
-  if (error) throw error;
-  return data;
+    for (const key of Object.keys(fields)) {
+        if (allowedFields.includes(key)) {
+        updateFields[key] = fields[key];
+        }
+    }
+
+    if (Object.keys(updateFields).length === 0) return null;
+
+    const { data, error } = await supabase
+        .from("Trips")
+        .update({
+        ...updateFields,
+        updated_at: new Date()
+        })
+        .eq("id", tripId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
 };
 
 // 🟢 Delete a trip

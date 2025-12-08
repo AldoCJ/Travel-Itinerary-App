@@ -1,109 +1,75 @@
+// models/eventModel.js
 import { getSupabaseAdminClient } from "../supabaseClient.js";
 
-// 🟢 Get all days for a trip
-export const getByTripId = async (tripId) => {
-  const supabase = getSupabaseAdminClient();
+const supabase = getSupabaseAdminClient();
 
+//  Get all events for a given day
+export const getAll = async (dayId) => {
   const { data, error } = await supabase
-    .from("Days")
+    .from("Events")
     .select("*")
-    .eq("trip_id", tripId)
-    .order("date", { ascending: true });
+    .eq("day_id", dayId)
+    .order("time", { ascending: true });
 
   if (error) throw error;
   return data;
 };
 
-// 🟢 Get all days (same as above)
-export const getAll = async (tripId) => {
-  const supabase = getSupabaseAdminClient();
-
+//  Get a specific event by ID
+export const getById = async (eventId) => {
   const { data, error } = await supabase
-    .from("Days")
+    .from("Events")
     .select("*")
-    .eq("trip_id", tripId)
-    .order("date", { ascending: true });
-
-  if (error) throw error;
-  return data;
-};
-
-// 🟢 Get a day by ID
-export const getById = async (id) => {
-  const supabase = getSupabaseAdminClient();
-
-  const { data, error } = await supabase
-    .from("Days")
-    .select("*")
-    .eq("id", id)
+    .eq("id", eventId)
     .single();
 
   if (error) throw error;
   return data;
 };
 
-// 🟢 Create a day
+//  Create a new event
 export const create = async (data) => {
-  const supabase = getSupabaseAdminClient();
-
   const {
-    trip_id,
-    date,
-    summary = "",
-    lodging,
-    lodging_cost = 0,
-    transport_cost = 0,
+    day_id,
+    title,
+    notes = "",
+    location,
+    cost,
+    time,
+    photo_url = "",
   } = data;
 
-  const { data: newDay, error } = await supabase
-    .from("Days")
+  const { data: event, error } = await supabase
+    .from("Events")
     .insert({
-      trip_id,
-      date,
-      summary,
-      lodging,
-      lodging_cost,
-      transport_cost,
+      day_id,
+      title,
+      notes,
+      location,
+      cost,
+      time,
+      photo: photo_url,
     })
     .select()
     .single();
 
   if (error) throw error;
-  return newDay;
+  return event;
 };
 
-// 🟢 Update a day
-export const update = async (dayId, fields) => {
-  const supabase = getSupabaseAdminClient();
-
-  if (!dayId || !fields || Object.keys(fields).length === 0) {
-    return null;
+//  Update an event
+export const update = async (eventId, updates) => {
+  if (!updates || Object.keys(updates).length === 0) {
+    throw new Error("No fields provided for update");
   }
-
-  const allowedFields = [
-    "date",
-    "summary",
-    "lodging",
-    "lodging_cost",
-    "transport_cost",
-  ];
-
-  const updateObject = {};
-
-  for (const [key, value] of Object.entries(fields)) {
-    if (allowedFields.includes(key)) {
-      updateObject[key] = value;
-    }
-  }
-
-  if (Object.keys(updateObject).length === 0) return null;
-
-  updateObject.updated_at = new Date();
 
   const { data, error } = await supabase
-    .from("Days")
-    .update(updateObject)
-    .eq("id", dayId)
+    .from("Events")
+    .update({
+      ...updates,
+      updated_at: new Date(),
+    })
+    .eq("id", eventId)
     .select()
     .single();
 
@@ -111,13 +77,13 @@ export const update = async (dayId, fields) => {
   return data;
 };
 
-// 🟢 Delete a day
+//  Delete an event
 export const remove = async (id) => {
-  const supabase = getSupabaseAdminClient();
-
-  const { error } = await supabase.from("Days").delete().eq("id", id);
+  const { error } = await supabase
+    .from("Events")
+    .delete()
+    .eq("id", id);
 
   if (error) throw error;
-
-  return { message: "Day deleted successfully" };
+  return { message: "Event deleted successfully" };
 };

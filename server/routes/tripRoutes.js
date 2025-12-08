@@ -11,6 +11,7 @@ import {
   removeDay,
   addEvent,
   updateEvent,
+  updateEventPhoto,
   removeEvent,
   getDay,
   getAllDays,
@@ -50,5 +51,7 @@ router.route('/:tripId/days/:dayId/events/:eventId')
     .get(getEvent)
     .patch(updateEvent)
     .delete(removeEvent);
+
+router.patch('/:tripId/days/:dayId/events/:eventId/picture', upload.single('picture'), updateEventPhoto);
 
 export default router;
