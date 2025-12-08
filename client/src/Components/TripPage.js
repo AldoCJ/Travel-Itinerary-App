@@ -66,6 +66,34 @@ function TripPage() {
         fetchDays();
     }, [id]);
 
+    useEffect(() => {
+        if (days.length === 0) return;
+
+        const fetchEventsForDays = async () => {
+            const updatedDays = await Promise.all(
+                days.map(async (day) => {
+                    try {
+                        const res = await fetch(`/api/trips/${id}/days/${day.id}/events`);
+
+                        if (res.status === 404) {
+                            return { ...day, events: [] };
+                        }
+
+                        const events = await res.json();
+                        return { ...day, events };
+                    } catch (error) {
+                        console.error("Error fetching events for day:", day.id, error);
+                        return { ...day, events: [] };
+                    }
+                })
+            );
+
+            setDays(updatedDays);
+        };
+
+        fetchEventsForDays();
+    }, [days.length, id]);
+
     if (loading) {
         return <div className="loading">Loading...</div>;
     }
@@ -98,7 +126,7 @@ function TripPage() {
                 <div className="trip-details">
                     <h2>Trip Details</h2>
                     <p className="trip-description">{trip.description}</p>
-                    
+
                     <div className="itinerary-section">
                         <h3>Itinerary</h3>
 
@@ -113,25 +141,29 @@ function TripPage() {
                                 <div key={day.id} className="day-item">
                                     <h4>Day {index + 1}</h4>
 
-                                    {/* If no activities field exists */}
-                                    {!day.activities || day.activities.length === 0 ? (
-                                        <p>No activities for this day.</p>
+                                    {/* Events */}
+                                    {!day.events || day.events.length === 0 ? (
+                                        <p>No events for this day.</p>
                                     ) : (
                                         <ul>
-                                            {day.activities.map((activity, actIndex) => (
-                                                <li key={actIndex}>
-                                                    <strong>{activity.time}</strong> – {activity.description}
-                                                    {activity.location && (
-                                                        <span className="location">📍 {activity.location}</span>
+                                            {day.events.map((event, actIndex) => (
+                                                <li key={event.id || actIndex}>
+                                                    <strong>{event.time || "No time"}</strong>
+                                                    {" – "}
+                                                    {event.title || event.description || "Untitled Event"}
+                                                    {event.location && (
+                                                        <span className="location"> 📍 {event.location}</span>
                                                     )}
                                                 </li>
                                             ))}
                                         </ul>
                                     )}
+
                                 </div>
                             ))
                         )}
                     </div>
+
 
                     <div className="additional-info">
                         <h3>Additional Information</h3>
@@ -145,7 +177,7 @@ function TripPage() {
                                 </ul>
                             </div>
                         )}
-                        
+
                         {trip.budget && (
                             <div className="budget-info">
                                 <h4>Estimated Budget</h4>
