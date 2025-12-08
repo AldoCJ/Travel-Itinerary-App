@@ -42,6 +42,8 @@ function TripPage() {
         return <div className="error">Trip not found</div>;
     }
 
+    console.log(trip);
+
     return (
         <div className="trip-page">
             <button className="back-button-clean" onClick={() => navigate(-1)}>← Back</button>
