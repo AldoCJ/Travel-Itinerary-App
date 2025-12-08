@@ -36,35 +36,35 @@ function TripPage() {
         fetchTripDetails();
     }, [id, stateTrip]);
 
-useEffect(() => {
-    const fetchDays = async () => {
-        try {
-            const response = await fetch(`/api/trips/${id}/days`);
+    useEffect(() => {
+        const fetchDays = async () => {
+            try {
+                const response = await fetch(`/api/trips/${id}/days`);
 
-            if (response.status === 404) {
-                // No days exist for this trip → treat as empty
-                console.warn("No days found for this trip.");
-                setDays([]);
-                return;
+                if (response.status === 404) {
+                    // No days exist for this trip → treat as empty
+                    console.warn("No days found for this trip.");
+                    setDays([]);
+                    return;
+                }
+
+                if (!response.ok) {
+                    console.error("Failed fetching trip days:", response.statusText);
+                    return;
+                }
+
+                const data = await response.json();
+                setDays(data);
+
+            } catch (error) {
+                console.error("Error fetching trip days:", error);
+            } finally {
+                setDaysLoading(false);
             }
+        };
 
-            if (!response.ok) {
-                console.error("Failed fetching trip days:", response.statusText);
-                return;
-            }
-
-            const data = await response.json();
-            setDays(data);
-
-        } catch (error) {
-            console.error("Error fetching trip days:", error);
-        } finally {
-            setDaysLoading(false);
-        }
-    };
-
-    fetchDays();
-}, [id]);
+        fetchDays();
+    }, [id]);
 
     if (loading) {
         return <div className="loading">Loading...</div>;
@@ -101,21 +101,36 @@ useEffect(() => {
                     
                     <div className="itinerary-section">
                         <h3>Itinerary</h3>
-                        {trip.itinerary && trip.itinerary.map((day, index) => (
-                            <div key={index} className="day-item">
-                                <h4>Day {index + 1}</h4>
-                                <ul>
-                                    {day.activities.map((activity, actIndex) => (
-                                        <li key={actIndex}>
-                                            <strong>{activity.time}</strong> - {activity.description}
-                                            {activity.location && (
-                                                <span className="location"> 📍 {activity.location}</span>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ))}
+
+                        {daysLoading && <p>Loading itinerary...</p>}
+
+                        {!daysLoading && days.length === 0 && (
+                            <p>No days available for this trip.</p>
+                        )}
+
+                        {!daysLoading && days.length > 0 && (
+                            days.map((day, index) => (
+                                <div key={day.id} className="day-item">
+                                    <h4>Day {index + 1}</h4>
+
+                                    {/* If no activities field exists */}
+                                    {!day.activities || day.activities.length === 0 ? (
+                                        <p>No activities for this day.</p>
+                                    ) : (
+                                        <ul>
+                                            {day.activities.map((activity, actIndex) => (
+                                                <li key={actIndex}>
+                                                    <strong>{activity.time}</strong> – {activity.description}
+                                                    {activity.location && (
+                                                        <span className="location">📍 {activity.location}</span>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            ))
+                        )}
                     </div>
 
                     <div className="additional-info">
