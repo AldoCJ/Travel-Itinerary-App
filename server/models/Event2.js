@@ -87,7 +87,7 @@ export const update = async (eventId, fields) => {
         "location",
         "cost",
         "time",
-        "photo",
+        "photo_url",
     ];
 
     const updateObject = {};
