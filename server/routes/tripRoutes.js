@@ -4,18 +4,22 @@ import {
   getAllTrips,
   getTripDetails,
   updateTrip,
+  updateTripPicture,
   deleteTrip,
   addDay,
   updateDay,
   removeDay,
   addEvent,
   updateEvent,
+  updateEventPhoto,
   removeEvent,
   getDay,
   getAllDays,
   getEvent,
   getAllEvents
 } from "../controllers/TripController.js";
+
+import upload from '../middleware/multerUpload.js';
 
 const router = express.Router();
 
@@ -24,6 +28,7 @@ router.route('/:tripId')
     .patch(updateTrip)
     .delete(deleteTrip);
 
+router.patch('/:tripId/picture', upload.single('picture'), updateTripPicture);
 
 router.route('/')
     .post(createTrip)
@@ -46,5 +51,7 @@ router.route('/:tripId/days/:dayId/events/:eventId')
     .get(getEvent)
     .patch(updateEvent)
     .delete(removeEvent);
+
+router.patch('/:tripId/days/:dayId/events/:eventId/picture', upload.single('picture'), updateEventPhoto);
 
 export default router;

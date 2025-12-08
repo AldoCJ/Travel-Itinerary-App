@@ -1,11 +1,10 @@
-// models/Event2.js
+// models/eventModel.js
 import { getSupabaseAdminClient } from "../supabaseClient.js";
 
-// ---------------------------------------------------------
-// 🟢 Get all events for a specific Day
-// ---------------------------------------------------------
+const supabase = getSupabaseAdminClient();
+
+//  Get all events for a given day
 export const getAll = async (dayId) => {
-    const supabase = getSupabaseAdminClient();
 
     const { data, error } = await supabase
         .from("Events")
@@ -21,7 +20,6 @@ export const getAll = async (dayId) => {
 // 🟢 Get an event by ID
 // ---------------------------------------------------------
 export const getById = async (eventId) => {
-    const supabase = getSupabaseAdminClient();
 
     const { data, error } = await supabase
         .from("Events")
@@ -37,7 +35,6 @@ export const getById = async (eventId) => {
 // 🟢 Create a new event
 // ---------------------------------------------------------
 export const create = async (fields) => {
-    const supabase = getSupabaseAdminClient();
 
     const {
         day_id,
@@ -77,7 +74,6 @@ export const create = async (fields) => {
 // 🟢 Update an event
 // ---------------------------------------------------------
 export const update = async (eventId, fields) => {
-    const supabase = getSupabaseAdminClient();
 
     if (!eventId) throw new Error("eventId is required");
     if (!fields || Object.keys(fields).length === 0) {
@@ -133,18 +129,13 @@ export const update = async (eventId, fields) => {
     return data;
 };
 
-// ---------------------------------------------------------
-// 🟢 Delete an event
-// ---------------------------------------------------------
-export const remove = async (eventId) => {
-    const supabase = getSupabaseAdminClient();
+//  Delete an event
+export const remove = async (id) => {
+  const { error } = await supabase
+    .from("Events")
+    .delete()
+    .eq("id", id);
 
-    const { error } = await supabase
-        .from("Events")
-        .delete()
-        .eq("id", eventId);
-
-    if (error) throw error;
-
-    return { message: "Event deleted successfully" };
+  if (error) throw error;
+  return { message: "Event deleted successfully" };
 };
