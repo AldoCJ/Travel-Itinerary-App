@@ -9,6 +9,8 @@ function TripPage() {
 
     const [trip, setTrip] = useState(stateTrip ?? null);
     const [loading, setLoading] = useState(stateTrip ? false : true);
+    const [days, setDays] = useState([]);
+    const [daysLoading, setDaysLoading] = useState(true);
 
     useEffect(() => {
         if (stateTrip) return; // we already have the trip from navigation state
@@ -34,6 +36,36 @@ function TripPage() {
         fetchTripDetails();
     }, [id, stateTrip]);
 
+useEffect(() => {
+    const fetchDays = async () => {
+        try {
+            const response = await fetch(`/api/trips/${id}/days`);
+
+            if (response.status === 404) {
+                // No days exist for this trip → treat as empty
+                console.warn("No days found for this trip.");
+                setDays([]);
+                return;
+            }
+
+            if (!response.ok) {
+                console.error("Failed fetching trip days:", response.statusText);
+                return;
+            }
+
+            const data = await response.json();
+            setDays(data);
+
+        } catch (error) {
+            console.error("Error fetching trip days:", error);
+        } finally {
+            setDaysLoading(false);
+        }
+    };
+
+    fetchDays();
+}, [id]);
+
     if (loading) {
         return <div className="loading">Loading...</div>;
     }
@@ -42,7 +74,8 @@ function TripPage() {
         return <div className="error">Trip not found</div>;
     }
 
-    console.log(trip);
+    console.log(days);
+
 
     return (
         <div className="trip-page">
