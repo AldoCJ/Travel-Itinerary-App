@@ -1191,6 +1191,46 @@ button[disabled] {
     transform: none;
 }
 
+/* Global danger button — make Delete button clearly red (place near end of file) */
+.btn.danger,
+.danger {
+  background: linear-gradient(180deg, #ef4444, #dc2626);
+  color: #fff;
+  border: 1px solid rgba(220, 38, 38, 0.14);
+  box-shadow: 0 10px 28px rgba(220, 38, 38, 0.08);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  transition: transform .08s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+.btn.danger:hover,
+.danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(220, 38, 38, 0.12);
+}
+
+.btn.danger:active,
+.danger:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.06);
+}
+
+.btn.danger:focus,
+.danger:focus {
+  outline: 3px solid rgba(220, 38, 38, 0.12);
+  outline-offset: 2px;
+}
+
+.btn.danger:disabled,
+.danger:disabled,
+.btn.danger[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed;
+  filter: grayscale(.08);
+}
+
+
 /* form actions */
 .form-actions {
     display: flex;
@@ -1252,5 +1292,71 @@ button[disabled] {
     padding: 6px 8px;
     font-size: 13px;
   }
+}
+
+/* Add these modal + danger button styles near the other .btn rules */
+
+/* Modal overlay and dialog for delete confirmation */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 7, 18, 0.52);
+  z-index: 2200;
+  padding: 20px;
+}
+
+.confirm-modal {
+  width: 420px;
+  max-width: 100%;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.28);
+  text-align: left;
+  font-size: 14px;      /* reduced base size */
+  line-height: 1.35;
+}
+
+.confirm-modal h2 {
+  margin: 0 0 8px 0;
+  font-size: 16px;      /* slightly smaller heading */
+  font-weight: 700;
+  color: var(--text);
+}
+
+.confirm-message {
+  margin: 0 0 12px 0;
+  color: #475569;
+  font-size: 13px;      /* smaller message text for a cleaner look */
+  line-height: 1.35;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;              /* tighten spacing between buttons */
+}
+
+/* Buttons inside modal — compact */
+.confirm-modal .btn {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.confirm-modal .btn.danger {
+  padding: 8px 12px;
+  font-size: 13px;
+  box-shadow: 0 10px 26px rgba(198,43,43,0.08);
+}
+
+/* ensure strong text in message stays readable */
+.confirm-modal .confirm-message strong {
+  color: var(--text);
+  font-weight: 700;
 }
 
