@@ -6,11 +6,10 @@ function TripPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const stateTrip = location.state?.trip;
+    const stateIsOwn = location.state?.isOwnProfile ?? false;
 
     const [trip, setTrip] = useState(stateTrip ?? null);
     const [loading, setLoading] = useState(stateTrip ? false : true);
-    const [days, setDays] = useState([]);
-    const [daysLoading, setDaysLoading] = useState(true);
 
     useEffect(() => {
         if (stateTrip) return; // we already have the trip from navigation state
@@ -36,64 +35,6 @@ function TripPage() {
         fetchTripDetails();
     }, [id, stateTrip]);
 
-    useEffect(() => {
-        const fetchDays = async () => {
-            try {
-                const response = await fetch(`/api/trips/${id}/days`);
-
-                if (response.status === 404) {
-                    // No days exist for this trip → treat as empty
-                    console.warn("No days found for this trip.");
-                    setDays([]);
-                    return;
-                }
-
-                if (!response.ok) {
-                    console.error("Failed fetching trip days:", response.statusText);
-                    return;
-                }
-
-                const data = await response.json();
-                setDays(data);
-
-            } catch (error) {
-                console.error("Error fetching trip days:", error);
-            } finally {
-                setDaysLoading(false);
-            }
-        };
-
-        fetchDays();
-    }, [id]);
-
-    useEffect(() => {
-        if (days.length === 0) return;
-
-        const fetchEventsForDays = async () => {
-            const updatedDays = await Promise.all(
-                days.map(async (day) => {
-                    try {
-                        const res = await fetch(`/api/trips/${id}/days/${day.id}/events`);
-
-                        if (res.status === 404) {
-                            return { ...day, events: [] };
-                        }
-
-                        const events = await res.json();
-                        return { ...day, events };
-                    } catch (error) {
-                        console.error("Error fetching events for day:", day.id, error);
-                        return { ...day, events: [] };
-                    }
-                })
-            );
-
-            setDays(updatedDays);
-        };
-
-        fetchEventsForDays();
-    }, [days.length, id]);
-
     if (loading) {
         return <div className="loading">Loading...</div>;
     }
@@ -102,20 +43,31 @@ function TripPage() {
         return <div className="error">Trip not found</div>;
     }
 
-    console.log(days);
-
-
     return (
         <div className="trip-page">
             <button className="back-button-clean" onClick={() => navigate(-1)}>← Back</button>
 
             <div className="trip-header">
-                <h1>{trip.title}</h1>
-                <div className="trip-meta">
-                    <span className="destination">📍 {trip.destination}</span>
-                    <span className="duration">⏱️ {trip.duration}</span>
-                    <span className="likes">❤️ {trip.likes}</span>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <h1>{trip.title}</h1>
+                  <div className="trip-meta">
+                      <span className="destination">📍 {trip.destination}</span>
+                      <span className="duration">⏱️ {trip.duration}</span>
+                      <span className="likes">❤️ {trip.likes}</span>
+                  </div>
                 </div>
+
+                {/* Edit button visible only when viewer owns the profile/trip */}
+                {stateIsOwn && (
+                    <div style={{ marginLeft: 20 }}>
+                        <button
+                            className="create-post-btn-small"
+                            onClick={() => navigate(`/edit-itinerary/${id}`, { state: { trip } })}
+                        >
+                            Edit Trip
+                        </button>
+                    </div>
+                )}
             </div>
 
             <div className="trip-content">
@@ -126,44 +78,25 @@ function TripPage() {
                 <div className="trip-details">
                     <h2>Trip Details</h2>
                     <p className="trip-description">{trip.description}</p>
-
+                    
                     <div className="itinerary-section">
                         <h3>Itinerary</h3>
-
-                        {daysLoading && <p>Loading itinerary...</p>}
-
-                        {!daysLoading && days.length === 0 && (
-                            <p>No days available for this trip.</p>
-                        )}
-
-                        {!daysLoading && days.length > 0 && (
-                            days.map((day, index) => (
-                                <div key={day.id} className="day-item">
-                                    <h4>Day {index + 1}</h4>
-
-                                    {/* Events */}
-                                    {!day.events || day.events.length === 0 ? (
-                                        <p>No events for this day.</p>
-                                    ) : (
-                                        <ul>
-                                            {day.events.map((event, actIndex) => (
-                                                <li key={event.id || actIndex}>
-                                                    <strong>{event.time || "No time"}</strong>
-                                                    {" – "}
-                                                    {event.title || event.description || "Untitled Event"}
-                                                    {event.location && (
-                                                        <span className="location"> 📍 {event.location}</span>
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-
-                                </div>
-                            ))
-                        )}
+                        {trip.itinerary && trip.itinerary.map((day, index) => (
+                            <div key={index} className="day-item">
+                                <h4>Day {index + 1}</h4>
+                                <ul>
+                                    {day.activities.map((activity, actIndex) => (
+                                        <li key={actIndex}>
+                                            <strong>{activity.time}</strong> - {activity.description}
+                                            {activity.location && (
+                                                <span className="location"> 📍 {activity.location}</span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
                     </div>
-
 
                     <div className="additional-info">
                         <h3>Additional Information</h3>
@@ -177,7 +110,7 @@ function TripPage() {
                                 </ul>
                             </div>
                         )}
-
+                        
                         {trip.budget && (
                             <div className="budget-info">
                                 <h4>Estimated Budget</h4>
