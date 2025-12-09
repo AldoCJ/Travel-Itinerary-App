@@ -58,3 +58,13 @@ export const update = async (id, updates) => {
   if (error) throw error;
   return data;
 };
+
+export const getTripsByUserId = async (userId) => {
+  const { data, error } = await supabase
+    .from("Trips")
+    .select("*")
+    .eq("user_id", userId);
+
+    if (error) throw error;
+    return data;
+}

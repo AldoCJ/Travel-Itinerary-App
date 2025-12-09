@@ -1,5 +1,5 @@
 // backend/src/models/Trip.js
-import { getSupabaseAdminClient } from "../supabaseClient.js";
+import {getSupabaseAdminClient } from "../supabaseClient.js";
 
 const supabase = getSupabaseAdminClient();
 
@@ -7,7 +7,7 @@ const supabase = getSupabaseAdminClient();
 export const getAll = async (filters = {}) => {
   const { location, userId } = filters;
 
-  let query = supabase.from("Trips").select("*");
+  let query =  supabase.from("Trips").select("*");
 
   if (userId) {
     query = query.eq("user_id", userId);
