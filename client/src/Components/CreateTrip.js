@@ -296,7 +296,7 @@ function CreateTrip() {
             <button type="submit" disabled={submitting} className="btn primary">
               {submitting ? 'Creating...' : 'Create Trip'}
             </button>
-            <button type="button" className="btn" onClick={() => navigate('/Profile')}>Cancel</button>
+            <button type="button" className="btn secondary" onClick={() => navigate('/Profile')}>Cancel</button>
           </div>
         </form>
       </div>
