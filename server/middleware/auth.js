@@ -1,17 +1,16 @@
 // middleware/authMiddleware.js
 
+import {getSupabaseAdminClient} from "../supabaseClient.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
-import {getSupabaseClient} from "../supabaseClient.js";
-
-export async function authMiddleware(req, res, next) {
-  try {
-    // Expecting the frontend to send:  Authorization: Bearer <token>
-    const token = req.headers.authorization?.split(" ")[1];
+export const authMiddleware = asyncHandler(async (req, res, next) => {
+  // Expecting the frontend to send:  Authorization: Bearer <token>
+  const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
-      return res.status(401).json({ error: "Missing auth token" });
-    }
+        return res.status(401).json({ error: "Missing auth token" });
+        }
 
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient();
 
     // Verify token with Supabase
     const { data, error } = await supabase.auth.getUser(token);
@@ -20,12 +19,20 @@ export async function authMiddleware(req, res, next) {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
 
-    // Attach user info to request object
-    req.user = data.user;
+    const authId = data.user.id;
 
-    // Move to the next middleware / route
+    // Fetch the corresponding Users row
+    const { data: userRow, error: userError } = await supabase
+        .from("Users")
+        .select("*")
+        .eq("auth_id", authId)
+        .single();
+
+    if (userError || !userRow) return res.status(401).json({ error: "User not found in Users table" });
+
+    // Attach the Users row to req.user
+    req.user = userRow;
+
     next();
-  } catch (err) {
-    res.status(500).json({ error: "Server error during authentication" });
   }
-}
+);

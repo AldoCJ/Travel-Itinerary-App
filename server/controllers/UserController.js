@@ -97,3 +97,14 @@ export const updateUserProfilePicture = async (req, res) => {
         res.status(500).json({ error: "Failed to update profile picture" });
     }
 }
+
+export const getUserTrips = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const trips = await User.getTripsByUserId(id);
+        res.status(200).json(trips);
+    } catch (error) {
+        console.error("Error fetching user trips:", error);
+        res.status(500).json({ error: "Failed to fetch user trips" });
+    }
+}

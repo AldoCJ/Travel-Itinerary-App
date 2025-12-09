@@ -4,7 +4,8 @@ import {
     deleteUser,
     getAllUsers,
     updateUser,
-    updateUserProfilePicture
+    updateUserProfilePicture,
+    getUserTrips
 } from "../controllers/UserController.js";
 
 import upload from "../middleware/multerUpload.js";
@@ -21,5 +22,9 @@ router.route("/:id")
     .delete(deleteUser);
 
 router.patch("/:id/pfp", upload.single("pfp"), updateUserProfilePicture);
+
+// Get User Trips route
+
+router.get("/:id/trips", getUserTrips);
 
 export default router;

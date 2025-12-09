@@ -1,76 +1,89 @@
 import express from "express";
 import { getSupabaseClient, getSupabaseAdminClient } from "../supabaseClient.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 const router = express.Router();
+const supabaseAdmin = getSupabaseAdminClient();
 
 // Sign up a new account
-router.post("/signup", async (req, res) => {
+router.post("/signup", asyncHandler(async (req, res) => {
     const { email, password, name } = req.body;
 
-    // Validate input
-    if (!email || !password) {
-        console.error("Signup error: Missing email or password");
-        return res.status(400).json({ error: "Email and password are required" });
+    if (!email || !password || !name) {
+        return res.status(400).json({ error: "Email, password, and name are required" });
     }
 
-    const supabase = getSupabaseClient();
-    const supabaseAdmin = getSupabaseAdminClient();
-    
-    const { data, error } = await supabase.auth.signUp({
+    // Use admin method to create user
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password
+        password,
+        email_confirm: true  // Optional: auto-confirm user to simplify testing
     });
 
-    if (error) {
-        console.error("Signup error:", error);
-        return res.status(400).json({ error: error.message });
-    }
+    if (authError) return res.status(400).json({ error: authError.message });
 
-    const user = data.user
-    console.log("New user ID:", user.id);
-    const { error: updateError } = await supabaseAdmin
-        .from('Users')
-        .upsert([{ id: user.id, name: name }]);
+    const authUserId = authData.user.id;
 
-    if (updateError) {
-        console.error("Error updating user profile:", updateError);
-        return res.status(500).json({ error: "Error updating user profile" });
-    }
+    // Create row in AuthUsers
+    const { error: authUserError } = await supabaseAdmin
+        .from("AuthUsers")
+        .insert([{ id: authUserId, name }]);
 
-    // Respond with user info (excluding password)
-    console.log("User signed up:", data.user);
-    res.status(201).json({ user: { id: data.user.id, email: data.user.email } });
-});
+    if (authUserError) return res.status(500).json({ error: "Error creating AuthUsers row" });
 
-// Sign in an existing account
-router.post("/signin", async (req, res) => {
-    const { email, password } = req.body;
+    // Create row in Users and link via auth_id
+    const { data: userData, error: userError } = await supabaseAdmin
+        .from("Users")
+        .insert([{ name, auth_id: authUserId }])
+        .select()
+        .single();
 
-    if (!email || !password) {
-        console.error("Signin error: Missing email or password");
-        return res.status(400).json({ error: "Email and password are required" });
-    }
+    if (userError) return res.status(500).json({ error: "Error creating Users row" });
 
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
-
-    if (error) {
-        console.error("Signin error:", error);
-        return res.status(400).json({ error: error.message });
-    }
-
-    // Respond with user info (excluding password)
-    console.log("User signed in:", data.user);
-    res.status(200).json({ 
-        user: { 
-            id: data.user.id, 
-            email: data.user.email 
+    res.status(201).json({
+        user: {
+            id: userData.id,
+            email,
+            auth_id: authUserId
         },
-        access_token: data.session?.access_token
+        access_token: null // No session created here; frontend will need to call signIn
     });
-});
+}));
+
+// Sign in an existing user
+router.post("/signin", asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: "Email and password are required" });
+
+    const supabaseClient = getSupabaseClient(); // <-- normal client with anon key
+
+    // Sign in
+    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+    });
+
+    if (signInError) return res.status(400).json({ error: signInError.message });
+    if (!signInData.session) return res.status(401).json({ error: "Could not create session" });
+
+    // Fetch corresponding Users row
+    const { data: userData, error: userDataError } = await supabaseAdmin
+        .from("Users")
+        .select("*")
+        .eq("auth_id", signInData.user.id)
+        .single();
+
+    if (userDataError || !userData) return res.status(500).json({ error: "Could not fetch linked Users row" });
+
+    res.status(200).json({
+        user: {
+            id: userData.id,
+            email: signInData.user.email,
+            auth_id: signInData.user.id
+        },
+        access_token: signInData.session.access_token
+    });
+}));
+
+
 export default router;
