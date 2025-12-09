@@ -11,6 +11,10 @@ function TripPage() {
     const [trip, setTrip] = useState(stateTrip ?? null);
     const [loading, setLoading] = useState(stateTrip ? false : true);
 
+    // Delete modal & state
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
     useEffect(() => {
         if (stateTrip) return; // we already have the trip from navigation state
 
@@ -35,6 +39,42 @@ function TripPage() {
         fetchTripDetails();
     }, [id, stateTrip]);
 
+    // Close modal helper
+    const closeDeleteModal = () => {
+        if (deleting) return;
+        setShowDeleteConfirm(false);
+    };
+
+    // handle Escape key to close modal
+    useEffect(() => {
+        if (!showDeleteConfirm) return;
+        const onKey = (e) => {
+            if (e.key === 'Escape') closeDeleteModal();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [showDeleteConfirm, deleting]);
+
+    const handleDelete = async () => {
+        if (!trip) return;
+        setDeleting(true);
+        try {
+            const res = await fetch(`/api/trips/${id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const errText = await res.text();
+                throw new Error(errText || 'Failed to delete trip');
+            }
+            // successful delete -> go back to profile
+            navigate('/Profile');
+        } catch (error) {
+            console.error('Delete trip error:', error);
+            alert('Failed to delete trip. See console for details.');
+        } finally {
+            setDeleting(false);
+            setShowDeleteConfirm(false);
+        }
+    };
+
     if (loading) {
         return <div className="loading">Loading...</div>;
     }
@@ -57,14 +97,22 @@ function TripPage() {
                   </div>
                 </div>
 
-                {/* Edit button visible only when viewer owns the profile/trip */}
+                {/* Edit + Delete actions — visible only to owner */}
                 {stateIsOwn && (
-                    <div style={{ marginLeft: 20 }}>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         <button
                             className="create-post-btn-small"
                             onClick={() => navigate(`/edit-itinerary/${id}`, { state: { trip } })}
                         >
                             Edit Trip
+                        </button>
+
+                        <button
+                            className="btn danger"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            title="Delete trip"
+                        >
+                            Delete
                         </button>
                     </div>
                 )}
@@ -120,6 +168,34 @@ function TripPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Delete confirmation modal */}
+            {showDeleteConfirm && (
+                <div className="modal-overlay" onClick={closeDeleteModal}>
+                    <div
+                        className="confirm-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="confirm-delete-title"
+                        aria-describedby="confirm-delete-desc"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 id="confirm-delete-title">Delete trip?</h2>
+                        <p id="confirm-delete-desc" className="confirm-message">
+                            This will permanently delete the trip and cannot be undone.
+                            <br />
+                            Are you sure you want to delete "<strong>{trip.title}</strong>"?
+                        </p>
+
+                        <div className="confirm-actions">
+                            <button className="btn" onClick={closeDeleteModal} disabled={deleting}>Cancel</button>
+                            <button className="btn danger" onClick={handleDelete} disabled={deleting}>
+                                {deleting ? 'Deleting...' : 'Delete Trip'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
