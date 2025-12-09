@@ -17,6 +17,8 @@ function CreateTrip() {
   ]);
   const [submitting, setSubmitting] = useState(false);
 
+  //const thumbnailPreview = thumbnail.trim() || '/public-imgs/default-trip.png';
+
   const validate = () => {
     if (!title.trim() || !destination.trim() || !duration.trim()) {
       alert('Please provide Title, Destination and Duration.');
@@ -126,113 +128,150 @@ function CreateTrip() {
   };
 
   return (
-    // added `trip-page` so the existing `.trip-page` CSS will provide a solid page background
     <div className="create-trip-page trip-page">
       <button className="back-button-clean" onClick={() => navigate(-1)}>
         ← Back
       </button>
 
-      <h1>Create New Trip</h1>
+      <div className="create-trip-container">
+        <header className="create-header">
+          <h1>Create New Trip</h1>
+          <p className="create-subtext">Fields marked with * are required. Add days and activities on the right.</p>
+        </header>
 
-      <form className="create-trip-form" onSubmit={onSubmit}>
-        <div className="form-row">
-          <label>Title*</label>
-          <input value={title} onChange={e => setTitle(e.target.value)} />
-        </div>
+        <form className="create-trip-form" onSubmit={onSubmit}>
+          <div className="create-grid">
+            <div className="left-col card">
+              <h2 className="card-title">Trip Info</h2>
 
-        <div className="form-row">
-          <label>Destination*</label>
-          <input value={destination} onChange={e => setDestination(e.target.value)} />
-        </div>
+              <div className="form-row">
+                <label htmlFor="trip-title">Title*</label>
+                <input id="trip-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Tokyo Adventure" />
+              </div>
 
-        <div className="form-row">
-          <label>Duration*</label>
-          <input value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 7 days" />
-        </div>
+              <div className="form-row">
+                <label htmlFor="trip-destination">Destination*</label>
+                <input id="trip-destination" value={destination} onChange={e => setDestination(e.target.value)} placeholder="City, Country" />
+              </div>
 
-        <div className="form-row">
-          <label>Thumbnail URL</label>
-          <input value={thumbnail} onChange={e => setThumbnail(e.target.value)} placeholder="/public-imgs/..." />
-        </div>
+              <div className="form-row">
+                <label htmlFor="trip-duration">Duration*</label>
+                <input id="trip-duration" value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 7 days" />
+              </div>
 
-        <div className="form-row">
-          <label>Start Date</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} />
-        </div>
-
-        <div className="form-row">
-          <label>Description</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} />
-        </div>
-
-        <div className="itinerary-editor">
-          <h3>Itinerary</h3>
-          {itinerary.map((day, dayIndex) => (
-            <div key={dayIndex} className="day-editor">
-              <div className="day-header">
-                <strong>Day {dayIndex + 1}</strong>
+              <div className="form-row two-up">
                 <div>
-                  <button type="button" onClick={() => addActivity(dayIndex)}>+ Activity</button>
-                  {itinerary.length > 1 && (
-                    <button type="button" onClick={() => removeDay(dayIndex)}>Remove Day</button>
-                  )}
+                  <label htmlFor="trip-date">Start Date</label>
+                  <input id="trip-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+                <div>
+                  <label htmlFor="trip-budget">Budget (optional)</label>
+                  <input id="trip-budget" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Approx. $..." />
                 </div>
               </div>
 
-              {day.activities.map((act, actIndex) => (
-                <div key={actIndex} className="activity-row">
-                  <input
-                    className="act-time"
-                    placeholder="Time (09:00)"
-                    value={act.time}
-                    onChange={e => updateActivity(dayIndex, actIndex, 'time', e.target.value)}
-                  />
-                  <input
-                    className="act-desc"
-                    placeholder="Activity description"
-                    value={act.description}
-                    onChange={e => updateActivity(dayIndex, actIndex, 'description', e.target.value)}
-                  />
-                  <input
-                    className="act-loc"
-                    placeholder="Location (optional)"
-                    value={act.location}
-                    onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)}
-                  />
-                  {!(day.activities.length === 1 && itinerary.length === 1) && (
-                    <button type="button" onClick={() => removeActivity(dayIndex, actIndex)}>Remove</button>
-                  )}
+              <div className="form-row">
+                <label htmlFor="trip-thumbnail">Thumbnail URL</label>
+                <input id="trip-thumbnail" value={thumbnail} onChange={e => setThumbnail(e.target.value)} placeholder="/public-imgs/..." />
+              </div>
+
+              <div className="form-row">
+                <label htmlFor="trip-description">Description</label>
+                <textarea id="trip-description" value={description} onChange={e => setDescription(e.target.value)} rows={5} placeholder="Short summary of the trip" />
+              </div>
+            </div>
+
+            <div className="right-col">
+              <div className="sticky-right">
+                <div className="card preview-card">
+                  <div className="preview-thumb">
+                    {/*<img*/}
+                    {/*  src={thumbnailPreview}*/}
+                    {/*  alt="trip thumbnail preview"*/}
+                    {/*  onError={(e) => { e.target.src = '/public-imgs/default-trip.png'; }}*/}
+                    {/*/>*/}
+                  </div>
+                  <div className="preview-meta">
+                    <h3 className="preview-title">{title || 'Untitled Trip'}</h3>
+                    <p className="muted preview-sub">{destination || 'Destination'}</p>
+                    <p className="muted preview-sub">{duration || ''}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          ))}
 
-          <div className="itinerary-actions">
-            <button type="button" onClick={addDay}>+ Add Day</button>
+                <div className="card itinerary-editor">
+                  <h2 className="card-title">Itinerary</h2>
+
+                  {itinerary.map((day, dayIndex) => (
+                    <div key={dayIndex} className="day-editor">
+                      <div className="day-header">
+                        <strong>Day {dayIndex + 1}</strong>
+                        <div className="day-controls">
+                          <button type="button" className="small-btn" onClick={() => addActivity(dayIndex)}>+ Activity</button>
+                          {itinerary.length > 1 && (
+                            <button type="button" className="small-btn ghost" onClick={() => removeDay(dayIndex)}>Remove Day</button>
+                          )}
+                        </div>
+                      </div>
+
+                      {day.activities.map((act, actIndex) => (
+                        <div key={actIndex} className="activity-row">
+                          <input
+                            className="act-time"
+                            placeholder="09:00"
+                            value={act.time}
+                            onChange={e => updateActivity(dayIndex, actIndex, 'time', e.target.value)}
+                          />
+                          <input
+                            className="act-desc"
+                            placeholder="Activity description"
+                            value={act.description}
+                            onChange={e => updateActivity(dayIndex, actIndex, 'description', e.target.value)}
+                          />
+                          <input
+                            className="act-loc"
+                            placeholder="Location (optional)"
+                            value={act.location}
+                            onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)}
+                          />
+                          {!(day.activities.length === 1 && itinerary.length === 1) && (
+                            <button type="button" className="small-btn ghost" onClick={() => removeActivity(dayIndex, actIndex)}>Remove</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+
+                  <div className="itinerary-actions">
+                    <button type="button" className="btn add-day" onClick={addDay}>+ Add Day</button>
+                  </div>
+                </div>
+
+                <div className="card tips-editor">
+                  <h2 className="card-title">Travel Tips</h2>
+
+                  {tips.map((t, i) => (
+                    <div key={i} className="tip-row">
+                      <input value={t} onChange={e => updateTip(i, e.target.value)} placeholder="Tip (e.g. buy local transit card)" />
+                      {tips.length > 1 && <button type="button" className="small-btn ghost" onClick={() => removeTip(i)}>Remove</button>}
+                    </div>
+                  ))}
+
+                  <div className="tips-actions">
+                    <button type="button" className="btn" onClick={addTip}>+ Add Tip</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="tips-editor">
-          <h3>Travel Tips</h3>
-          {tips.map((t, i) => (
-            <div key={i} className="tip-row">
-              <input value={t} onChange={e => updateTip(i, e.target.value)} placeholder="Tip" />
-              {tips.length > 1 && <button type="button" onClick={() => removeTip(i)}>Remove</button>}
-            </div>
-          ))}
-          <button type="button" onClick={addTip}>+ Add Tip</button>
-        </div>
-
-        <div className="form-row">
-          <label>Budget (optional)</label>
-          <input value={budget} onChange={e => setBudget(e.target.value)} placeholder="Approx. $..." />
-        </div>
-
-        <div className="form-actions">
-          <button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create Trip'}</button>
-          <button type="button" onClick={() => navigate('/Profile')}>Cancel</button>
-        </div>
-      </form>
+          <div className="form-actions">
+            <button type="submit" disabled={submitting} className="btn primary">
+              {submitting ? 'Creating...' : 'Create Trip'}
+            </button>
+            <button type="button" className="btn" onClick={() => navigate('/Profile')}>Cancel</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
