@@ -208,7 +208,15 @@ function CreateTrip() {
                         <div className="day-controls">
                           <button type="button" className="small-btn" onClick={() => addActivity(dayIndex)}>+ Activity</button>
                           {itinerary.length > 1 && (
-                            <button type="button" className="small-btn ghost" onClick={() => removeDay(dayIndex)}>Remove Day</button>
+                            <button
+                              type="button"
+                              className="small-btn ghost"
+                              onClick={() => removeDay(dayIndex)}
+                              aria-label={`Remove Day ${dayIndex + 1}`}
+                              title="Remove day"
+                            >
+                              Remove
+                            </button>
                           )}
                         </div>
                       </div>
@@ -234,7 +242,17 @@ function CreateTrip() {
                             onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)}
                           />
                           {!(day.activities.length === 1 && itinerary.length === 1) && (
-                            <button type="button" className="small-btn ghost" onClick={() => removeActivity(dayIndex, actIndex)}>Remove</button>
+                            <button
+                              type="button"
+                              className="small-btn ghost icon-btn"
+                              onClick={() => removeActivity(dayIndex, actIndex)}
+                              aria-label={`Remove activity ${actIndex + 1} (Day ${dayIndex + 1})`}
+                              title="Remove activity"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true">
+                                <path d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12l-4.89 4.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/>
+                              </svg>
+                            </button>
                           )}
                         </div>
                       ))}
@@ -252,7 +270,17 @@ function CreateTrip() {
                   {tips.map((t, i) => (
                     <div key={i} className="tip-row">
                       <input value={t} onChange={e => updateTip(i, e.target.value)} placeholder="Tip (e.g. buy local transit card)" />
-                      {tips.length > 1 && <button type="button" className="small-btn ghost" onClick={() => removeTip(i)}>Remove</button>}
+                      {tips.length > 1 && (
+                        <button
+                          type="button"
+                          className="small-btn ghost"
+                          onClick={() => removeTip(i)}
+                          aria-label={`Remove tip ${i + 1}`}
+                          title="Remove tip"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   ))}
 

@@ -768,6 +768,77 @@ html, body {
     transition: box-shadow .18s ease, transform .18s ease;
 }
 
+/* Replace / add these rules to fix itinerary row overflow (day/activity layout) */
+
+.day-editor {
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* avoid children bleeding out */
+}
+
+/* Responsive, non-breaking activity grid:
+   - middle column uses minmax(0, 1fr) so it can shrink properly
+   - overall width is 100% and uses box-sizing */
+.activity-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 120px 48px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure form controls fill grid cells and don't push min-width */
+.activity-row input,
+.activity-row button {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Allow description to shrink (prevents overflow) */
+.activity-row .act-desc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Make location field flexible but constrained */
+.activity-row .act-loc {
+  width: 120px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Compact the remove button so it fits in the grid cell */
+.activity-row .small-btn {
+  padding: 6px;
+  width: 48px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Safety: allow long words to wrap inside day editor */
+.itinerary-editor,
+.day-editor {
+  overflow-wrap: anywhere;
+}
+
+/* Mobile fallback: stack/simplify columns on very small screens */
+@media (max-width: 520px) {
+  .activity-row {
+    grid-template-columns: 72px 1fr auto;
+  }
+  .activity-row .act-loc {
+    display: none;
+  }
+  .right-col .sticky-right {
+    position: static;
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 1000px) {
     .trip-main-image {
@@ -848,10 +919,11 @@ html, body {
 
 /* two column layout: left form / right sidebar */
 .create-grid {
-    display: grid;
-    grid-template-columns: 1fr 380px;
-    gap: 32px;
-    align-items: start;
+  display: grid;
+  /* right column gets a fixed wider width; left column takes the remaining space but can shrink */
+  grid-template-columns: minmax(0, calc(100% - 460px)) 500px;
+  gap: 32px;
+  align-items: start;
 }
 
 /* generic card used by the create page */
@@ -1011,79 +1083,63 @@ html, body {
     cursor: pointer;
 }
 
-.small-btn.ghost {
-    background: rgba(36,48,58,0.06);
-    color: var(--text);
-    border: 1px solid rgba(36,48,58,0.06);
+/* compact icon button variant used for remove actions */
+.small-btn.icon-btn {
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
-/* activity row aligned as grid for consistent spacing */
+.small-btn.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+.small-btn.icon-btn.ghost {
+  background: rgba(36,48,58,0.06);
+  color: var(--text);
+  border: 1px solid rgba(36,48,58,0.06);
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  height: 36px;
+}
+
+.small-btn.icon-btn:hover {
+  background: rgba(11,116,255,0.06);
+  color: var(--accent);
+}
+
 .activity-row {
-    display: grid;
-    grid-template-columns: 92px 1fr 150px 80px;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 140px 40px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.activity-row input {
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(36,48,58,0.06);
-    background: #fff;
-    color: var(--text);
-    height: 40px;
-    font-size: 14px;
-}
-
-.activity-row .act-time {
-    width: 92px;
-}
-
-.activity-row .act-desc {
-    min-width: 120px;
-}
-
-.activity-row .act-loc {
-    width: 150px;
-}
-
-/* itinerary actions */
-.itinerary-actions {
-    margin-top: 10px;
-}
-
-.itinerary-actions .btn,
-.btn.add-day {
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: none;
-    background: var(--accent);
-    color: #fff;
-    cursor: pointer;
-    font-weight: 700;
-}
-
-/* tips */
-.tips-editor .tip-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.tip-row input {
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(36,48,58,0.06);
-    background: #fff;
-    color: var(--text);
-    flex: 1;
-}
-
-/* tips actions */
-.tips-actions {
-    margin-top: 8px;
+/* mobile fallback: stack/simplify columns */
+@media (max-width: 920px) {
+  .activity-row {
+    grid-template-columns: 80px 1fr auto;
+  }
+  .activity-row .act-loc {
+    display: none;
+  }
+  .right-col .sticky-right {
+    position: static;
+  }
 }
 
 /* base button */
