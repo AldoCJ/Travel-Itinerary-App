@@ -3,7 +3,7 @@ import {getSupabaseAdminClient } from "../supabaseClient.js";
 
 const supabase = getSupabaseAdminClient();
 
-// 🟢 Get all trips (optionally with filters)
+// Get all trips (optionally with filters)
 export const getAll = async (filters = {}) => {
   const { location, userId } = filters;
 
@@ -23,7 +23,7 @@ export const getAll = async (filters = {}) => {
   return data;
 };
 
-// 🟢 Get a specific trip by ID
+// Get a specific trip by ID
 export const getById = async (id) => {
   const { data, error } = await supabase
     .from("Trips")
@@ -35,7 +35,7 @@ export const getById = async (id) => {
   return data;
 };
 
-// 🟢 Get trips by User ID
+// Get trips by User ID
 export const getByUserId = async (userId) => {
   const { data, error } = await supabase
     .from("Trips")
@@ -46,7 +46,7 @@ export const getByUserId = async (userId) => {
   return data;
 };
 
-// 🟢 Create a new trip
+// Create a new trip
 export const create = async (data) => {
   const { 
     user_id,
@@ -76,7 +76,7 @@ export const create = async (data) => {
   return newTrip;
 };
 
-// 🟢 Update an existing trip
+// Update an existing trip
 export const update = async (tripId, fields) => {
     if (!tripId || !fields || Object.keys(fields).length === 0) {
         return null;
@@ -107,7 +107,7 @@ export const update = async (tripId, fields) => {
     return data;
 };
 
-// 🟢 Delete a trip
+// Delete a trip
 export const remove = async (id) => {
   const { error } = await supabase
     .from("Trips")
@@ -117,4 +117,85 @@ export const remove = async (id) => {
   if (error) throw error;
 
   return { message: "Trip deleted successfully" };
+};
+
+// Search for a trip
+export const search = async ({ query }) => {
+    if (!query || !query.trim()) return [];
+
+    const term = `%${query.trim()}%`;
+
+    // Trips by title
+    const { data: tripsByTitle, error: titleError } = await supabase
+        .from("Trips")
+        .select("id")
+        .ilike("title", term);
+
+    if (titleError) throw titleError;
+
+    // Trips by user name
+    const { data: users, error: userError } = await supabase
+        .from("Users")
+        .select("id")
+        .ilike("name", term);
+
+    if (userError) throw userError;
+
+    const userIds = users.map(u => u.id);
+
+    let tripsByUsers = [];
+    if (userIds.length > 0) {
+        const { data, error } = await supabase
+            .from("Trips")
+            .select("id")
+            .in("user_id", userIds);
+
+        if (error) throw error;
+        tripsByUsers = data;
+    }
+
+    // Trips by event location
+    const { data: events, error: eventError } = await supabase
+        .from("Events")
+        .select(`
+      id,
+      Days (
+        trip_id
+      )
+    `)
+        .ilike("location", term);
+
+    if (eventError) throw eventError;
+
+    // Merge unique Trip IDs
+    const tripIds = new Set([
+        ...tripsByTitle.map(t => t.id),
+        ...tripsByUsers.map(t => t.id),
+        ...events.map(e => e.Days?.trip_id).filter(Boolean),
+    ]);
+
+    if (tripIds.size === 0) return [];
+
+    // Fetch FINAL frontend-ready trips
+    const { data: trips, error: finalError } = await supabase
+        .from("Trips")
+        .select(`
+      id,
+      title,
+      summary,
+      start_date,
+      end_date,
+      total_price,
+      photo_url,
+      Users (
+        id,
+        name,
+        profile_pic_url
+      )
+    `)
+        .in("id", [...tripIds]);
+
+    if (finalError) throw finalError;
+
+    return trips;
 };

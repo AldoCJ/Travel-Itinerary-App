@@ -1,27 +1,30 @@
 import express from 'express';
 import {
-  createTrip,
-  getAllTrips,
-  getTripDetails,
-  updateTrip,
-  updateTripPicture,
-  deleteTrip,
-  addDay,
-  updateDay,
-  removeDay,
-  addEvent,
-  updateEvent,
-  updateEventPhoto,
-  removeEvent,
-  getDay,
-  getAllDays,
-  getEvent,
-  getAllEvents
+    createTrip,
+    getAllTrips,
+    getTripDetails,
+    updateTrip,
+    updateTripPicture,
+    deleteTrip,
+    addDay,
+    updateDay,
+    removeDay,
+    addEvent,
+    updateEvent,
+    updateEventPhoto,
+    removeEvent,
+    getDay,
+    getAllDays,
+    getEvent,
+    getAllEvents,
+    searchTrips
 } from "../controllers/TripController.js";
 
 import upload from '../middleware/multerUpload.js';
 
 const router = express.Router();
+
+router.get("/search", searchTrips);
 
 router.route('/:tripId')
     .get(getTripDetails)

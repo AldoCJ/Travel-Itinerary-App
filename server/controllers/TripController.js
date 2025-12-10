@@ -209,6 +209,15 @@ export const deleteTrip = asyncHandler(async (req, res) => {
     res.status(200).json({ message: msg });
 });
 
+// Search for a trip
+export const searchTrips = asyncHandler(async (req, res) => {
+    const { query } = req.query;
+
+    const trips = await Trip.search({ query });
+
+    res.status(200).json(trips);
+});
+
 // -------------------- Day Controllers -------------------- //
 
 // Add a day to a trip
@@ -238,10 +247,10 @@ export const getAllDays = asyncHandler(async (req, res) => {
     }
 
     const days = await Day.getAll(tripId);
-    if (!days.length) {
+    /*if (!days.length) {
         res.status(404);
         throw new Error("No days found for this trip");
-    }
+    }*/
 
     res.status(200).json(days);
 });
@@ -320,10 +329,10 @@ export const getAllEvents = asyncHandler(async (req, res) => {
 
     const events = await Event.getAll(dayId);
 
-    if (!events || events.length === 0) {
+    /*if (!events || events.length === 0) {
         res.status(404);
         throw new Error("No events found for this day.");
-    }
+    }*/
 
     res.status(200).json(events);
 });
