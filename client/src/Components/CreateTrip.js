@@ -1,6 +1,5 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 function CreateTrip() {
   const navigate = useNavigate();
@@ -14,11 +13,9 @@ function CreateTrip() {
   const [tips, setTips] = useState(['']);
   const [budget, setBudget] = useState('');
   const [itinerary, setItinerary] = useState([
-    { activities: [{ time: '', description: '', location: '' }] },
+    { date: '', activities: [{ time: '', description: '', location: '' }] },
   ]);
   const [submitting, setSubmitting] = useState(false);
-
-  //const thumbnailPreview = thumbnail.trim() || '/public-imgs/default-trip.png';
 
   const validate = () => {
     if (!title.trim() || !destination.trim() || !duration.trim()) {
@@ -30,7 +27,7 @@ function CreateTrip() {
 
   // Itinerary helpers
   const addDay = () =>
-    setItinerary(prev => [...prev, { activities: [{ time: '', description: '', location: '' }] }]);
+    setItinerary(prev => [...prev, { date: '', activities: [{ time: '', description: '', location: '' }] }]);
 
   const removeDay = index =>
     setItinerary(prev => prev.filter((_, i) => i !== index));
@@ -67,6 +64,12 @@ function CreateTrip() {
       )
     );
 
+  // Day date updater
+  const updateDayDate = (dayIndex, value) =>
+    setItinerary(prev =>
+      prev.map((day, i) => (i === dayIndex ? { ...day, date: value } : day))
+    );
+
   // Tips helpers
   const updateTip = (index, value) =>
     setTips(prev => prev.map((t, i) => (i === index ? value : t)));
@@ -74,40 +77,70 @@ function CreateTrip() {
   const addTip = () => setTips(prev => [...prev, '']);
   const removeTip = index => setTips(prev => prev.filter((_, i) => i !== index));
 
-  const onSubmit = async (e) => {
+  const onSubmit = async e => {
     e.preventDefault();
     if (!validate()) return;
 
     const tripPayload = {
-      user_id: "9004d534-fb61-4d6c-bdb8-a3046ccb64bb",
-      title: title,
-      summary: description,
-      start_date: date,
-      end_date: date, 
-      number_of_people: Number(budget) || 1,
-      total_price: Number(budget) || 0,
+      title: title.trim(),
+      destination: destination.trim(),
+      duration: duration.trim(),
+      thumbnail: thumbnail.trim() || '/public-imgs/default-trip.png',
+      date: date || new Date().toISOString().split('T')[0],
+      description: description.trim(),
+      itinerary: itinerary.map(day => ({
+        date: day.date || undefined,
+        activities: day.activities
+          .map(a => ({
+            time: a.time.trim(),
+            description: a.description.trim(),
+            location: a.location.trim() || undefined,
+          }))
+          .filter(a => a.description || a.time), // drop empty activities
+      })),
+      tips: tips.map(t => t.trim()).filter(Boolean),
+      budget: budget.trim(),
     };
 
     try {
       setSubmitting(true);
+      const res = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tripPayload),
+      });
 
-      const res = await axios.post("/api/trips", tripPayload);
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Failed to create trip');
+      }
 
-      // navigate if backend returns id
-      const created = res.data;
-      if (created.id) {
-        navigate(`/itinerary/${created.id}`, { state: { trip: created } });
+      const created = await res.json();
+      if (created && (created.id || created._id)) {
+        const id = created.id ?? created._id;
+        navigate(`/itinerary/${id}`, { state: { trip: created } });
       } else {
-        navigate("/Profile");
+        navigate('/Profile');
       }
     } catch (error) {
-      console.error("Create trip error:", error);
-      alert("Failed to create trip.");
+      console.error('Create trip error:', error);
+      alert('Failed to create trip. See console for details.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // format yyyy-mm-dd -> user locale short date
+  const formatDateDisplay = (isoDate) => {
+    if (!isoDate) return '';
+    try {
+      const d = new Date(isoDate);
+      if (Number.isNaN(d.getTime())) return isoDate;
+      return d.toLocaleDateString();
+    } catch {
+      return isoDate;
+    }
+  };
 
   return (
     <div className="create-trip-page trip-page">
@@ -166,13 +199,7 @@ function CreateTrip() {
             <div className="right-col">
               <div className="sticky-right">
                 <div className="card preview-card">
-                  <div className="preview-thumb">
-                    {/*<img*/}
-                    {/*  src={thumbnailPreview}*/}
-                    {/*  alt="trip thumbnail preview"*/}
-                    {/*  onError={(e) => { e.target.src = '/public-imgs/default-trip.png'; }}*/}
-                    {/*/>*/}
-                  </div>
+                  <div className="preview-thumb" />
                   <div className="preview-meta">
                     <h3 className="preview-title">{title || 'Untitled Trip'}</h3>
                     <p className="muted preview-sub">{destination || 'Destination'}</p>
@@ -186,7 +213,23 @@ function CreateTrip() {
                   {itinerary.map((day, dayIndex) => (
                     <div key={dayIndex} className="day-editor">
                       <div className="day-header">
-                        <strong>Day {dayIndex + 1}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                          <strong>Day {dayIndex + 1}</strong>
+
+                          {/* show input only while date not set; once set the input is removed */}
+                          {!day.date ? (
+                            <input
+                              type="date"
+                              className="day-date-input"
+                              value={day.date || ''}
+                              onChange={e => updateDayDate(dayIndex, e.target.value)}
+                              aria-label={`Date for Day ${dayIndex + 1}`}
+                            />
+                          ) : (
+                            <span className="day-date-display">{formatDateDisplay(day.date)}</span>
+                          )}
+                        </div>
+
                         <div className="day-controls">
                           <button type="button" className="small-btn" onClick={() => addActivity(dayIndex)}>+ Activity</button>
                           {itinerary.length > 1 && (
