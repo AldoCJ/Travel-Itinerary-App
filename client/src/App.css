@@ -1409,3 +1409,11 @@ button[disabled] {
   box-sizing: border-box;
 }
 
+/* Append this rule to style required-field labels with an asterisk */
+.form-row label.required::after {
+  content: " *";
+  color: #ef4444; /* red asterisk */
+  margin-left: 4px;
+  font-weight: 700;
+}
+

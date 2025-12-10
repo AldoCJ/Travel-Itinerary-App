@@ -32,9 +32,32 @@ function CreateTrip() {
     };
   }, []);
 
+  // Validation: title, destination, duration, budget required.
+  // For activities: if activity has time or description, location is required.
   const validate = () => {
-    if (!title.trim() || !destination.trim() || !duration.trim()) {
-      alert('Please provide Title, Destination and Duration.');
+    const missing = [];
+    if (!title.trim()) missing.push('Title');
+    if (!destination.trim()) missing.push('Destination');
+    if (!duration.trim()) missing.push('Duration');
+    if (!budget.trim()) missing.push('Budget');
+
+    const missingLocations = [];
+    itinerary.forEach((day, dayIndex) => {
+      day.activities.forEach((act, actIndex) => {
+        const hasContent = (act.description && act.description.trim()) || (act.time && act.time.trim());
+        if (hasContent && (!act.location || !act.location.trim())) {
+          missingLocations.push(`Day ${dayIndex + 1} — activity ${actIndex + 1}`);
+        }
+      });
+    });
+
+    if (missing.length > 0 || missingLocations.length > 0) {
+      let msg = '';
+      if (missing.length > 0) msg += 'Please provide: ' + missing.join(', ') + '.\n';
+      if (missingLocations.length > 0) {
+        msg += 'Please add locations for: ' + missingLocations.join(', ') + '.';
+      }
+      alert(msg);
       return false;
     }
     return true;
@@ -250,17 +273,17 @@ function CreateTrip() {
               <h2 className="card-title">Trip Info</h2>
 
               <div className="form-row">
-                <label htmlFor="trip-title">Title*</label>
+                <label htmlFor="trip-title" className="required">Title</label>
                 <input id="trip-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Tokyo Adventure" />
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-destination">Destination*</label>
+                <label htmlFor="trip-destination" className="required">Destination</label>
                 <input id="trip-destination" value={destination} onChange={e => setDestination(e.target.value)} placeholder="City, Country" />
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-duration">Duration*</label>
+                <label htmlFor="trip-duration" className="required">Duration</label>
                 <input id="trip-duration" value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 7 days" />
               </div>
 
@@ -270,7 +293,7 @@ function CreateTrip() {
                   <input id="trip-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                 </div>
                 <div>
-                  <label htmlFor="trip-budget">Budget (optional)</label>
+                  <label htmlFor="trip-budget" className="required">Budget</label>
                   <input id="trip-budget" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Approx. $..." />
                 </div>
               </div>
@@ -383,7 +406,7 @@ function CreateTrip() {
                           />
                           <input
                             className="act-loc"
-                            placeholder="Location (optional)"
+                            placeholder="Location*"
                             value={act.location}
                             onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)}
                           />

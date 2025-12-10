@@ -88,9 +88,32 @@ function EditTrip() {
     setThumbnailPreview(objUrl);
   };
 
+  // Validation: title, destination, duration, budget required.
+  // For activities: if activity has time or description, location is required.
   const validate = () => {
-    if (!title.trim() || !destination.trim() || !duration.trim()) {
-      alert('Please provide Title, Destination and Duration.');
+    const missing = [];
+    if (!title.trim()) missing.push('Title');
+    if (!destination.trim()) missing.push('Destination');
+    if (!duration.trim()) missing.push('Duration');
+    if (!budget.trim()) missing.push('Budget');
+
+    const missingLocations = [];
+    itinerary.forEach((day, dayIndex) => {
+      day.activities.forEach((act, actIndex) => {
+        const hasContent = (act.description && act.description.trim()) || (act.time && act.time.trim());
+        if (hasContent && (!act.location || !act.location.trim())) {
+          missingLocations.push(`Day ${dayIndex + 1} — activity ${actIndex + 1}`);
+        }
+      });
+    });
+
+    if (missing.length > 0 || missingLocations.length > 0) {
+      let msg = '';
+      if (missing.length > 0) msg += 'Please provide: ' + missing.join(', ') + '.\n';
+      if (missingLocations.length > 0) {
+        msg += 'Please add locations for: ' + missingLocations.join(', ') + '.';
+      }
+      alert(msg);
       return false;
     }
     return true;
@@ -237,7 +260,7 @@ function EditTrip() {
       <div className="create-trip-container">
         <header className="create-header">
           <h1>Edit Trip</h1>
-          <p className="create-subtext">Update fields and save. Required: Title, Destination, Duration.</p>
+          <p className="create-subtext">Update fields and save. Required: Title, Destination, Duration, Budget.</p>
         </header>
 
         <form className="create-trip-form" onSubmit={onSubmit}>
@@ -246,17 +269,17 @@ function EditTrip() {
               <h2 className="card-title">Trip Info</h2>
 
               <div className="form-row">
-                <label htmlFor="trip-title">Title*</label>
+                <label htmlFor="trip-title" className="required">Title</label>
                 <input id="trip-title" value={title} onChange={e => setTitle(e.target.value)} />
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-destination">Destination*</label>
+                <label htmlFor="trip-destination" className="required">Destination</label>
                 <input id="trip-destination" value={destination} onChange={e => setDestination(e.target.value)} />
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-duration">Duration*</label>
+                <label htmlFor="trip-duration" className="required">Duration</label>
                 <input id="trip-duration" value={duration} onChange={e => setDuration(e.target.value)} />
               </div>
 
@@ -266,7 +289,7 @@ function EditTrip() {
                   <input id="trip-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                 </div>
                 <div>
-                  <label htmlFor="trip-budget">Budget (optional)</label>
+                  <label htmlFor="trip-budget" className="required">Budget</label>
                   <input id="trip-budget" value={budget} onChange={e => setBudget(e.target.value)} />
                 </div>
               </div>
@@ -323,7 +346,7 @@ function EditTrip() {
                         <div key={actIndex} className="activity-row">
                           <input className="act-time" placeholder="09:00" value={act.time} onChange={e => updateActivity(dayIndex, actIndex, 'time', e.target.value)} />
                           <input className="act-desc" placeholder="Activity description" value={act.description} onChange={e => updateActivity(dayIndex, actIndex, 'description', e.target.value)} />
-                          <input className="act-loc" placeholder="Location (optional)" value={act.location} onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)} />
+                          <input className="act-loc" placeholder="Location*" value={act.location} onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)} />
                           {!(day.activities.length === 1 && itinerary.length === 1) && (
                             <button type="button" className="small-btn ghost icon-btn" onClick={() => removeActivity(dayIndex, actIndex)} title="Remove activity">
                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12l-4.89 4.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/></svg>
