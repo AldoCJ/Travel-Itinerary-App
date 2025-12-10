@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import '../App.css';
 
 function Header({ onSearch }) {
+    const [value, setValue] = useState('');
+
     const handleChange = (e) => {
-        if (onSearch) onSearch(e.target.value);
+        setValue(e.target.value);
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && onSearch) {
+            onSearch(value);
+        }
     };
 
     return (
@@ -17,7 +25,9 @@ function Header({ onSearch }) {
                 <input
                     type="search"
                     placeholder="Search trips by name..."
+                    value={value}
                     onChange={handleChange}
+                    onKeyDown={handleKeyDown}
                     className="search-input"
                     aria-label="Search trips"
                 />

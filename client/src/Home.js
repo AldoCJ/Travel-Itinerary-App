@@ -10,40 +10,99 @@ function Home() {
     const [error, setError] = useState(null);
     const [query, setQuery] = useState('');
 
+    // Helper to map API trips to TripGrid format
+    const mapTrips = (trips) => {
+        return trips.map(trip => ({
+            id: trip.id,
+            title: trip.title,
+            destination: trip.summary,
+            duration: `${trip.start_date.slice(0, 10)} → ${trip.end_date.slice(0, 10)}`,
+            thumbnail: trip.photo_url || '/public-imgs/tokyopic.png',
+            likes: trip.number_of_people,
+            date: trip.start_date.slice(0, 10)
+        }));
+    };
+
+    // Initial load: all trips
     useEffect(() => {
+        let active = true;
+        setLoading(true);
+        setError(null);
+
         axios.get('/api/trips')
             .then((res) => {
-                // Map API data to match the format your TripGrid expects
-                const formattedPosts = res.data.map(trip => ({
-                    id: trip.id,
-                    title: trip.title,
-                    destination: trip.summary, // or wherever you want
-                    duration: `${trip.start_date.slice(0, 10)} → ${trip.end_date.slice(0, 10)}`,
-                    thumbnail: '/public-imgs/tokyopic.png', // placeholder if API has no image
-                    likes: trip.number_of_people, // or another field if you have
-                    date: trip.start_date.slice(0, 10)
-                }));
-                setPosts(formattedPosts);
+                if (!active) return;
+                setPosts(mapTrips(res.data));
                 setLoading(false);
             })
             .catch((err) => {
+                if (!active) return;
                 setError(err.message);
                 setLoading(false);
             });
+
+        return () => { active = false; };
     }, []);
 
-    const filteredPosts = posts.filter(post =>
-        post.title.toLowerCase().includes(query.toLowerCase())
-    );
+    // Server-side search when query changes (triggered by Enter in Header)
+    useEffect(() => {
+        // If query is empty, reload all trips to restore the list
+        if (!query || !query.trim()) {
+            let active = true;
+            setLoading(true);
+            setError(null);
 
-    if (loading) return <h3>Loading trips...</h3>;
-    if (error) return <h3>Error: {error}</h3>;
+            axios.get('/api/trips')
+                .then((res) => {
+                    if (!active) return;
+                    setPosts(mapTrips(res.data));
+                    setLoading(false);
+                })
+                .catch((err) => {
+                    if (!active) return;
+                    setError(err.message);
+                    setLoading(false);
+                });
+
+            return () => { active = false; };
+        }
+
+        const controller = new AbortController();
+        setLoading(true);
+        setError(null);
+
+        axios.get('/api/trips/search', {
+            params: { query },
+            signal: controller.signal
+        })
+            .then((res) => {
+                setPosts(mapTrips(res.data || []));
+                setLoading(false);
+            })
+            .catch((err) => {
+                if (err.name === 'CanceledError') return;
+                setError(err.message);
+                setLoading(false);
+            });
+
+        return () => {
+            controller.abort();
+        };
+    }, [query]);
+
+    /*const filteredPosts = posts.filter(post =>
+        post.title.toLowerCase().includes(query.toLowerCase())
+    );*/
 
     return (
         <>
             <Header onSearch={setQuery} />
             <main className="home-main">
-                <TripGrid posts={filteredPosts} isOwnProfile={false} />
+                {loading && <h3>Loading trips...</h3>}
+                {!loading && error && <h3>Error: {error}</h3>}
+                {!loading && !error && (
+                    <TripGrid posts={posts} isOwnProfile={false} />
+                )}
             </main>
         </>
     );
