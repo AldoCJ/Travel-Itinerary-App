@@ -1397,3 +1397,15 @@ button[disabled] {
   }
 }
 
+/* small: style file inputs for the forms so they align with other controls */
+.form-row input[type="file"] {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(36,48,58,0.06);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  height: 40px;
+  box-sizing: border-box;
+}
+

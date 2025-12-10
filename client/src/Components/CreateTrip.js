@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function CreateTrip() {
@@ -7,7 +7,9 @@ function CreateTrip() {
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
   const [duration, setDuration] = useState('');
-  const [thumbnail, setThumbnail] = useState('');
+  const [thumbnail, setThumbnail] = useState(''); // keeps existing URL if any
+  const [thumbnailFile, setThumbnailFile] = useState(null); // File object when user uploads
+  const [thumbnailPreview, setThumbnailPreview] = useState(''); // preview src (object URL or remote)
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
   const [tips, setTips] = useState(['']);
@@ -17,6 +19,19 @@ function CreateTrip() {
   ]);
   const [submitting, setSubmitting] = useState(false);
 
+  // track whether the preview url is an object URL we should revoke
+  const prevPreviewIsObjectRef = useRef(false);
+  const prevPreviewUrlRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      // cleanup object URL on unmount
+      if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+        URL.revokeObjectURL(prevPreviewUrlRef.current);
+      }
+    };
+  }, []);
+
   const validate = () => {
     if (!title.trim() || !destination.trim() || !duration.trim()) {
       alert('Please provide Title, Destination and Duration.');
@@ -24,6 +39,56 @@ function CreateTrip() {
     }
     return true;
   };
+
+  // handle file selection and create a preview
+  const handleThumbnailFileChange = e => {
+    const file = e.target.files && e.target.files[0];
+    // revoke previous object URL if any
+    if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+      URL.revokeObjectURL(prevPreviewUrlRef.current);
+      prevPreviewIsObjectRef.current = false;
+      prevPreviewUrlRef.current = null;
+    }
+
+    if (!file) {
+      setThumbnailFile(null);
+      setThumbnailPreview('');
+      return;
+    }
+
+    setThumbnailFile(file);
+    const objUrl = URL.createObjectURL(file);
+    prevPreviewIsObjectRef.current = true;
+    prevPreviewUrlRef.current = objUrl;
+    setThumbnailPreview(objUrl);
+  };
+
+  // helpers to upload file or fallback to data URL
+  const fileToDataUrl = file =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  async function tryUploadFileToServer(file) {
+    // attempts to POST a single file to /api/upload and expect JSON { url: "..." }
+    // adjust endpoint/key to match your backend.
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: fd,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || 'Upload failed');
+    }
+    const data = await res.json();
+    // common response shapes: { url }, { path }, { filename }
+    return data.url || data.path || data.filename || data.fileUrl || null;
+  }
 
   // Itinerary helpers
   const addDay = () =>
@@ -81,29 +146,54 @@ function CreateTrip() {
     e.preventDefault();
     if (!validate()) return;
 
-    const tripPayload = {
-      title: title.trim(),
-      destination: destination.trim(),
-      duration: duration.trim(),
-      thumbnail: thumbnail.trim() || '/public-imgs/default-trip.png',
-      date: date || new Date().toISOString().split('T')[0],
-      description: description.trim(),
-      itinerary: itinerary.map(day => ({
-        date: day.date || undefined,
-        activities: day.activities
-          .map(a => ({
-            time: a.time.trim(),
-            description: a.description.trim(),
-            location: a.location.trim() || undefined,
-          }))
-          .filter(a => a.description || a.time), // drop empty activities
-      })),
-      tips: tips.map(t => t.trim()).filter(Boolean),
-      budget: budget.trim(),
-    };
-
+    setSubmitting(true);
     try {
-      setSubmitting(true);
+      let thumbnailUrl = '/public-imgs/default-trip.png';
+
+      if (thumbnailFile) {
+        // Try server upload first, fallback to data URL
+        try {
+          const uploaded = await tryUploadFileToServer(thumbnailFile);
+          if (uploaded) {
+            thumbnailUrl = uploaded;
+          } else {
+            // fallback to data URL
+            thumbnailUrl = await fileToDataUrl(thumbnailFile);
+          }
+        } catch (err) {
+          console.warn('Upload failed, falling back to data URL:', err);
+          try {
+            thumbnailUrl = await fileToDataUrl(thumbnailFile);
+          } catch (err2) {
+            console.warn('data URL fallback failed', err2);
+            thumbnailUrl = '/public-imgs/default-trip.png';
+          }
+        }
+      } else if (thumbnail) {
+        thumbnailUrl = thumbnail;
+      }
+
+      const tripPayload = {
+        title: title.trim(),
+        destination: destination.trim(),
+        duration: duration.trim(),
+        thumbnail: thumbnailUrl,
+        date: date || new Date().toISOString().split('T')[0],
+        description: description.trim(),
+        itinerary: itinerary.map(day => ({
+          date: day.date || undefined,
+          activities: day.activities
+            .map(a => ({
+              time: a.time.trim(),
+              description: a.description.trim(),
+              location: a.location.trim() || undefined,
+            }))
+            .filter(a => a.description || a.time), // drop empty activities
+        })),
+        tips: tips.map(t => t.trim()).filter(Boolean),
+        budget: budget.trim(),
+      };
+
       const res = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -186,8 +276,34 @@ function CreateTrip() {
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-thumbnail">Thumbnail URL</label>
-                <input id="trip-thumbnail" value={thumbnail} onChange={e => setThumbnail(e.target.value)} placeholder="/public-imgs/..." />
+                <label htmlFor="trip-thumbnail-file">Thumbnail (upload)</label>
+                <input
+                  id="trip-thumbnail-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailFileChange}
+                />
+                {thumbnailPreview ? (
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <img src={thumbnailPreview} alt="thumbnail preview" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8 }} />
+                    <button
+                      type="button"
+                      className="small-btn ghost"
+                      onClick={() => {
+                        // clear file + preview
+                        setThumbnailFile(null);
+                        if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+                          URL.revokeObjectURL(prevPreviewUrlRef.current);
+                          prevPreviewIsObjectRef.current = false;
+                          prevPreviewUrlRef.current = null;
+                        }
+                        setThumbnailPreview('');
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="form-row">
@@ -199,7 +315,12 @@ function CreateTrip() {
             <div className="right-col">
               <div className="sticky-right">
                 <div className="card preview-card">
-                  <div className="preview-thumb" />
+                  <div className="preview-thumb">
+                    <img
+                      src={thumbnailPreview || thumbnail || '/public-imgs/default-trip.png'}
+                      alt="trip thumbnail preview"
+                    />
+                  </div>
                   <div className="preview-meta">
                     <h3 className="preview-title">{title || 'Untitled Trip'}</h3>
                     <p className="muted preview-sub">{destination || 'Destination'}</p>
