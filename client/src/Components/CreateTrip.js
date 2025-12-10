@@ -1,6 +1,5 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 function CreateTrip() {
   const navigate = useNavigate();
@@ -8,29 +7,115 @@ function CreateTrip() {
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
   const [duration, setDuration] = useState('');
-  const [thumbnail, setThumbnail] = useState('');
+  const [thumbnail, setThumbnail] = useState(''); // keeps existing URL if any
+  const [thumbnailFile, setThumbnailFile] = useState(null); // File object when user uploads
+  const [thumbnailPreview, setThumbnailPreview] = useState(''); // preview src (object URL or remote)
   const [date, setDate] = useState('');
   const [description, setDescription] = useState('');
   const [tips, setTips] = useState(['']);
   const [budget, setBudget] = useState('');
   const [itinerary, setItinerary] = useState([
-    { activities: [{ time: '', description: '', location: '' }] },
+    { date: '', activities: [{ time: '', description: '', location: '' }] },
   ]);
   const [submitting, setSubmitting] = useState(false);
 
-  //const thumbnailPreview = thumbnail.trim() || '/public-imgs/default-trip.png';
+  // track whether the preview url is an object URL we should revoke
+  const prevPreviewIsObjectRef = useRef(false);
+  const prevPreviewUrlRef = useRef(null);
 
+  useEffect(() => {
+    return () => {
+      // cleanup object URL on unmount
+      if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+        URL.revokeObjectURL(prevPreviewUrlRef.current);
+      }
+    };
+  }, []);
+
+  // Validation: title, destination, duration, budget required.
+  // For activities: if activity has time or description, location is required.
   const validate = () => {
-    if (!title.trim() || !destination.trim() || !duration.trim()) {
-      alert('Please provide Title, Destination and Duration.');
+    const missing = [];
+    if (!title.trim()) missing.push('Title');
+    if (!destination.trim()) missing.push('Destination');
+    if (!duration.trim()) missing.push('Duration');
+    if (!budget.trim()) missing.push('Budget');
+
+    const missingLocations = [];
+    itinerary.forEach((day, dayIndex) => {
+      day.activities.forEach((act, actIndex) => {
+        const hasContent = (act.description && act.description.trim()) || (act.time && act.time.trim());
+        if (hasContent && (!act.location || !act.location.trim())) {
+          missingLocations.push(`Day ${dayIndex + 1} — activity ${actIndex + 1}`);
+        }
+      });
+    });
+
+    if (missing.length > 0 || missingLocations.length > 0) {
+      let msg = '';
+      if (missing.length > 0) msg += 'Please provide: ' + missing.join(', ') + '.\n';
+      if (missingLocations.length > 0) {
+        msg += 'Please add locations for: ' + missingLocations.join(', ') + '.';
+      }
+      alert(msg);
       return false;
     }
     return true;
   };
 
+  // handle file selection and create a preview
+  const handleThumbnailFileChange = e => {
+    const file = e.target.files && e.target.files[0];
+    // revoke previous object URL if any
+    if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+      URL.revokeObjectURL(prevPreviewUrlRef.current);
+      prevPreviewIsObjectRef.current = false;
+      prevPreviewUrlRef.current = null;
+    }
+
+    if (!file) {
+      setThumbnailFile(null);
+      setThumbnailPreview('');
+      return;
+    }
+
+    setThumbnailFile(file);
+    const objUrl = URL.createObjectURL(file);
+    prevPreviewIsObjectRef.current = true;
+    prevPreviewUrlRef.current = objUrl;
+    setThumbnailPreview(objUrl);
+  };
+
+  // helpers to upload file or fallback to data URL
+  const fileToDataUrl = file =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  async function tryUploadFileToServer(file) {
+    // attempts to POST a single file to /api/upload and expect JSON { url: "..." }
+    // adjust endpoint/key to match your backend.
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: fd,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || 'Upload failed');
+    }
+    const data = await res.json();
+    // common response shapes: { url }, { path }, { filename }
+    return data.url || data.path || data.filename || data.fileUrl || null;
+  }
+
   // Itinerary helpers
   const addDay = () =>
-    setItinerary(prev => [...prev, { activities: [{ time: '', description: '', location: '' }] }]);
+    setItinerary(prev => [...prev, { date: '', activities: [{ time: '', description: '', location: '' }] }]);
 
   const removeDay = index =>
     setItinerary(prev => prev.filter((_, i) => i !== index));
@@ -67,6 +152,12 @@ function CreateTrip() {
       )
     );
 
+  // Day date updater
+  const updateDayDate = (dayIndex, value) =>
+    setItinerary(prev =>
+      prev.map((day, i) => (i === dayIndex ? { ...day, date: value } : day))
+    );
+
   // Tips helpers
   const updateTip = (index, value) =>
     setTips(prev => prev.map((t, i) => (i === index ? value : t)));
@@ -74,40 +165,95 @@ function CreateTrip() {
   const addTip = () => setTips(prev => [...prev, '']);
   const removeTip = index => setTips(prev => prev.filter((_, i) => i !== index));
 
-  const onSubmit = async (e) => {
+  const onSubmit = async e => {
     e.preventDefault();
     if (!validate()) return;
 
-    const tripPayload = {
-      user_id: "9004d534-fb61-4d6c-bdb8-a3046ccb64bb",
-      title: title,
-      summary: description,
-      start_date: date,
-      end_date: date, 
-      number_of_people: Number(budget) || 1,
-      total_price: Number(budget) || 0,
-    };
-
+    setSubmitting(true);
     try {
-      setSubmitting(true);
+      let thumbnailUrl = '/public-imgs/default-trip.png';
 
-      const res = await axios.post("/api/trips", tripPayload);
+      if (thumbnailFile) {
+        // Try server upload first, fallback to data URL
+        try {
+          const uploaded = await tryUploadFileToServer(thumbnailFile);
+          if (uploaded) {
+            thumbnailUrl = uploaded;
+          } else {
+            // fallback to data URL
+            thumbnailUrl = await fileToDataUrl(thumbnailFile);
+          }
+        } catch (err) {
+          console.warn('Upload failed, falling back to data URL:', err);
+          try {
+            thumbnailUrl = await fileToDataUrl(thumbnailFile);
+          } catch (err2) {
+            console.warn('data URL fallback failed', err2);
+            thumbnailUrl = '/public-imgs/default-trip.png';
+          }
+        }
+      } else if (thumbnail) {
+        thumbnailUrl = thumbnail;
+      }
 
-      // navigate if backend returns id
-      const created = res.data;
-      if (created.id) {
-        navigate(`/itinerary/${created.id}`, { state: { trip: created } });
+      const tripPayload = {
+        title: title.trim(),
+        destination: destination.trim(),
+        duration: duration.trim(),
+        thumbnail: thumbnailUrl,
+        date: date || new Date().toISOString().split('T')[0],
+        description: description.trim(),
+        itinerary: itinerary.map(day => ({
+          date: day.date || undefined,
+          activities: day.activities
+            .map(a => ({
+              time: a.time.trim(),
+              description: a.description.trim(),
+              location: a.location.trim() || undefined,
+            }))
+            .filter(a => a.description || a.time), // drop empty activities
+        })),
+        tips: tips.map(t => t.trim()).filter(Boolean),
+        budget: budget.trim(),
+      };
+
+      const res = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tripPayload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Failed to create trip');
+      }
+
+      const created = await res.json();
+      if (created && (created.id || created._id)) {
+        const id = created.id ?? created._id;
+        navigate(`/itinerary/${id}`, { state: { trip: created } });
       } else {
-        navigate("/Profile");
+        navigate('/Profile');
       }
     } catch (error) {
-      console.error("Create trip error:", error);
-      alert("Failed to create trip.");
+      console.error('Create trip error:', error);
+      alert('Failed to create trip. See console for details.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // format yyyy-mm-dd -> user locale short date
+  const formatDateDisplay = (isoDate) => {
+    if (!isoDate) return '';
+    try {
+      const d = new Date(isoDate);
+      if (Number.isNaN(d.getTime())) return isoDate;
+      return d.toLocaleDateString();
+    } catch {
+      return isoDate;
+    }
+  };
 
   return (
     <div className="create-trip-page trip-page">
@@ -127,17 +273,17 @@ function CreateTrip() {
               <h2 className="card-title">Trip Info</h2>
 
               <div className="form-row">
-                <label htmlFor="trip-title">Title*</label>
+                <label htmlFor="trip-title" className="required">Title</label>
                 <input id="trip-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Tokyo Adventure" />
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-destination">Destination*</label>
+                <label htmlFor="trip-destination" className="required">Destination</label>
                 <input id="trip-destination" value={destination} onChange={e => setDestination(e.target.value)} placeholder="City, Country" />
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-duration">Duration*</label>
+                <label htmlFor="trip-duration" className="required">Duration</label>
                 <input id="trip-duration" value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 7 days" />
               </div>
 
@@ -147,14 +293,40 @@ function CreateTrip() {
                   <input id="trip-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                 </div>
                 <div>
-                  <label htmlFor="trip-budget">Budget (optional)</label>
+                  <label htmlFor="trip-budget" className="required">Budget</label>
                   <input id="trip-budget" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Approx. $..." />
                 </div>
               </div>
 
               <div className="form-row">
-                <label htmlFor="trip-thumbnail">Thumbnail URL</label>
-                <input id="trip-thumbnail" value={thumbnail} onChange={e => setThumbnail(e.target.value)} placeholder="/public-imgs/..." />
+                <label htmlFor="trip-thumbnail-file">Thumbnail (upload)</label>
+                <input
+                  id="trip-thumbnail-file"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailFileChange}
+                />
+                {thumbnailPreview ? (
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <img src={thumbnailPreview} alt="thumbnail preview" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8 }} />
+                    <button
+                      type="button"
+                      className="small-btn ghost"
+                      onClick={() => {
+                        // clear file + preview
+                        setThumbnailFile(null);
+                        if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+                          URL.revokeObjectURL(prevPreviewUrlRef.current);
+                          prevPreviewIsObjectRef.current = false;
+                          prevPreviewUrlRef.current = null;
+                        }
+                        setThumbnailPreview('');
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="form-row">
@@ -167,11 +339,10 @@ function CreateTrip() {
               <div className="sticky-right">
                 <div className="card preview-card">
                   <div className="preview-thumb">
-                    {/*<img*/}
-                    {/*  src={thumbnailPreview}*/}
-                    {/*  alt="trip thumbnail preview"*/}
-                    {/*  onError={(e) => { e.target.src = '/public-imgs/default-trip.png'; }}*/}
-                    {/*/>*/}
+                    <img
+                      src={thumbnailPreview || thumbnail || '/public-imgs/default-trip.png'}
+                      alt="trip thumbnail preview"
+                    />
                   </div>
                   <div className="preview-meta">
                     <h3 className="preview-title">{title || 'Untitled Trip'}</h3>
@@ -186,7 +357,23 @@ function CreateTrip() {
                   {itinerary.map((day, dayIndex) => (
                     <div key={dayIndex} className="day-editor">
                       <div className="day-header">
-                        <strong>Day {dayIndex + 1}</strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                          <strong>Day {dayIndex + 1}</strong>
+
+                          {/* show input only while date not set; once set the input is removed */}
+                          {!day.date ? (
+                            <input
+                              type="date"
+                              className="day-date-input"
+                              value={day.date || ''}
+                              onChange={e => updateDayDate(dayIndex, e.target.value)}
+                              aria-label={`Date for Day ${dayIndex + 1}`}
+                            />
+                          ) : (
+                            <span className="day-date-display">{formatDateDisplay(day.date)}</span>
+                          )}
+                        </div>
+
                         <div className="day-controls">
                           <button type="button" className="small-btn" onClick={() => addActivity(dayIndex)}>+ Activity</button>
                           {itinerary.length > 1 && (
@@ -219,7 +406,7 @@ function CreateTrip() {
                           />
                           <input
                             className="act-loc"
-                            placeholder="Location (optional)"
+                            placeholder="Location*"
                             value={act.location}
                             onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)}
                           />

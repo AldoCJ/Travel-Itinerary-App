@@ -1360,3 +1360,60 @@ button[disabled] {
   font-weight: 700;
 }
 
+/* Append/replace these rules for the day-date display behavior and smaller date text */
+
+/* date input (visible only while day.date is empty) */
+.create-trip-page .day-header .day-date-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(36,48,58,0.08);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+/* once a date is set the input is removed and the display is shrunk */
+.create-trip-page .day-header .day-date-display {
+  font-size: 12px; /* smaller text */
+  color: var(--muted);
+  margin-left: 6px;
+  display: inline-block;
+  min-width: 0;
+}
+
+/* mobile adjustments so the date input / display don't overflow */
+@media (max-width: 640px) {
+  .create-trip-page .day-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .create-trip-page .day-header .day-date-input {
+    width: 100%;
+  }
+}
+
+/* small: style file inputs for the forms so they align with other controls */
+.form-row input[type="file"] {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(36,48,58,0.06);
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  height: 40px;
+  box-sizing: border-box;
+}
+
+/* Append this rule to style required-field labels with an asterisk */
+.form-row label.required::after {
+  content: " *";
+  color: #ef4444; /* red asterisk */
+  margin-left: 4px;
+  font-weight: 700;
+}
+
