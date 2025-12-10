@@ -1,5 +1,5 @@
 import './App.css';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import TripGrid from './Components/TripGrid';
@@ -12,14 +12,14 @@ function Profile() {
         bio: 'Travel enthusiast sharing amazing itineraries from around the world 🌍✈️',
         profileImage: '/public-imgs/tennisbirdpfp.png', 
         postCount: 6,
-        followerCount: 1205,
-        followingCount: 384,
+
         isOwnProfile: true
     });
 
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         axios.get('/api/trips')
@@ -73,20 +73,21 @@ function Profile() {
                             <span className="stat">
                                 <strong>{user.postCount}</strong> itineraries
                             </span>
-                            <span className="stat">
-                                <strong>{user.followerCount}</strong> followers
-                            </span>
-                            <span className="stat">
-                                <strong>{user.followingCount}</strong> following
-                            </span>
                         </div>
 
                         <p className="bio-text">{user.bio}</p>
 
                         {user.isOwnProfile ? (
                             <div className="profile-actions">
-                                <button className="edit-profile-btn">Edit Profile</button>
-                                <button className="settings-btn"></button>
+                                <NavLink to="/edit-profile" className="edit-profile-btn">
+                                    Edit Profile
+                                </NavLink>
+                                <button
+                                    className="settings-btn"
+                                    onClick={() => navigate('/settings')}
+                                >
+                                    Settings
+                                </button>
                             </div>
                         ) : (
                             <div className="profile-actions">

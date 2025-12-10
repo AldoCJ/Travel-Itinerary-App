@@ -5,8 +5,10 @@ import Home from './Home';
 import TripPage from './Components/TripPage';
 import CreateTrip from './Components/CreateTrip';
 import EditTrip from './Components/EditTrip';
+import EditProfile from './Components/EditProfile';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import TestAPI from './TestAPI';
+import Settings from './Components/Settings';
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
                       <Route path="/itinerary/:id" element={<TripPage />} />
                       <Route path="/create-itinerary" element={<CreateTrip />} />
                       <Route path="/edit-itinerary/:id" element={<EditTrip />} />
+                      <Route path="/edit-profile/" element={<EditProfile />} />
+                      <Route path="/settings" element={<Settings />} />
                     </Routes>
                 </BrowserRouter>
             </div>
