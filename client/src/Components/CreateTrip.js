@@ -1,5 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function CreateTrip() {
   const navigate = useNavigate();
@@ -73,59 +74,40 @@ function CreateTrip() {
   const addTip = () => setTips(prev => [...prev, '']);
   const removeTip = index => setTips(prev => prev.filter((_, i) => i !== index));
 
-  const onSubmit = async e => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     const tripPayload = {
-      title: title.trim(),
-      destination: destination.trim(),
-      duration: duration.trim(),
-      thumbnail: thumbnail.trim() || '/public-imgs/default-trip.png',
-      date: date || new Date().toISOString().split('T')[0],
-      description: description.trim(),
-      itinerary: itinerary.map(day => ({
-        activities: day.activities
-          .map(a => ({
-            time: a.time.trim(),
-            description: a.description.trim(),
-            location: a.location.trim() || undefined,
-          }))
-          .filter(a => a.description || a.time), // drop empty activities
-      })),
-      tips: tips.map(t => t.trim()).filter(Boolean),
-      budget: budget.trim(),
+      user_id: "9004d534-fb61-4d6c-bdb8-a3046ccb64bb",
+      title: title,
+      summary: description,
+      start_date: date,
+      end_date: date, 
+      number_of_people: Number(budget) || 1,
+      total_price: Number(budget) || 0,
     };
 
     try {
       setSubmitting(true);
-      const res = await fetch('/api/trips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tripPayload),
-      });
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || 'Failed to create trip');
-      }
+      const res = await axios.post("/api/trips", tripPayload);
 
-      const created = await res.json();
-      // If backend returns created trip with id, navigate to its page
-      if (created && (created.id || created._id)) {
-        const id = created.id ?? created._id;
-        navigate(`/itinerary/${id}`, { state: { trip: created } });
+      // navigate if backend returns id
+      const created = res.data;
+      if (created.id) {
+        navigate(`/itinerary/${created.id}`, { state: { trip: created } });
       } else {
-        // fallback to profile if id not returned
-        navigate('/Profile');
+        navigate("/Profile");
       }
     } catch (error) {
-      console.error('Create trip error:', error);
-      alert('Failed to create trip. See console for details.');
+      console.error("Create trip error:", error);
+      alert("Failed to create trip.");
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div className="create-trip-page trip-page">
