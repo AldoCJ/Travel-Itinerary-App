@@ -1,13 +1,38 @@
-import React from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate, NavLink } from 'react-router-dom';
+import { AuthContext } from '../Context/AuthContext';
 
 function Register() {
     const navigate = useNavigate();
+    const { signUp, signIn } = useContext(AuthContext);
 
-    const handleRegister = (e) => {
+    const [email, setEmail] = useState("");
+    const [name, setName] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+
+    const handleRegister = async (e) => {
         e.preventDefault();
-        // Add registration logic here
-        navigate('/Home');
+        setError("");
+
+        try {
+            // 1. Create user
+            await signUp(email, password, name);
+
+            // 2. Auto-login
+            const loginData = await signIn(email, password);
+
+            // 3. Save token + user
+            localStorage.setItem("token", loginData.access_token);
+            localStorage.setItem("user", JSON.stringify(loginData.user));
+
+            // 4. Redirect
+            navigate('/Home');
+
+        } catch (err) {
+            console.error(err);
+            setError(err.response?.data?.error || "Registration failed");
+        }
     };
 
     return (
@@ -29,28 +54,41 @@ function Register() {
                 border: '8px solid #f8f8f8'
             }}>
                 <header style={{ color: '#f8f8d8', fontSize: '2rem', marginBottom: '24px' }}>Register</header>
+
                 <form onSubmit={handleRegister}>
                     <input
                         type="email"
                         placeholder="Email"
                         required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         style={{ marginBottom: '20px', width: '100%' }}
                     />
-                    <br />
+
                     <input
                         type="text"
                         placeholder="Username"
                         required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         style={{ marginBottom: '20px', width: '100%' }}
                     />
-                    <br />
+
                     <input
                         type="password"
                         placeholder="Password"
                         required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         style={{ marginBottom: '20px', width: '100%' }}
                     />
-                    <br />
+
+                    {error && (
+                        <p style={{ color: 'red', marginBottom: "10px" }}>
+                            {error}
+                        </p>
+                    )}
+
                     <button
                         type="submit"
                         style={{
@@ -69,6 +107,7 @@ function Register() {
                         Register
                     </button>
                 </form>
+
                 <div style={{ marginTop: '24px', color: 'white', fontSize: '1.2rem' }}>
                     Already registered?{' '}
                     <NavLink to="/" style={{ color: '#90caf9', textDecoration: 'underline' }}>

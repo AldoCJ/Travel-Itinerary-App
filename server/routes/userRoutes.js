@@ -9,6 +9,7 @@ import {
 } from "../controllers/UserController.js";
 
 import upload from "../middleware/multerUpload.js";
+import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -18,10 +19,11 @@ router.get("/", getAllUsers);
 // By ID routes
 router.route("/:id")
     .get(getUser)
-    .patch(updateUser)
-    .delete(deleteUser);
+    .patch(authMiddleware, updateUser)
 
-router.patch("/:id/pfp", upload.single("pfp"), updateUserProfilePicture);
+router.delete("/me", authMiddleware, deleteUser);
+
+router.patch("/:id/pfp", authMiddleware, upload.single("pfp"), updateUserProfilePicture);
 
 // Get User Trips route
 
