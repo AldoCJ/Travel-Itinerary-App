@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Add this import
-
-// Local default profile picture (place your default image in public or src/assets)
+import { useNavigate } from 'react-router-dom';
 import defaultPfp from '../assets/defaultPfp.jpg';
 
 const EditProfile = () => {
   const [username, setUsername] = useState('');
-  const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [pfp, setPfp] = useState(defaultPfp);
   const [pfpFile, setPfpFile] = useState(null);
-  const navigate = useNavigate(); // Add this line
+  const navigate = useNavigate();
 
-  // Handle profile picture change
   const handlePfpChange = (e) => {
     const file = e.target.files[0];
     if (file && (file.type === 'image/png' || file.type === 'image/jpeg' || file.type === 'image/jpg')) {
@@ -21,23 +17,21 @@ const EditProfile = () => {
     }
   };
 
-  // Handle form submit
   const handleSubmit = (e) => {
     e.preventDefault();
-    // For now, just log the data
-    console.log({ username, name, bio, pfpFile });
+    console.log({ username, bio, pfpFile });
     alert('Profile updated! (Front-end only)');
   };
 
   return (
     <div style={{
       minHeight: '100vh',
-      width: '100vw', // ensures full width
+      width: '100vw',
       background: 'rgba(2, 15, 31, 1)',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      position: 'fixed', // optional: prevents scrolling
+      position: 'fixed',
       top: 0,
       left: 0,
       zIndex: 0
@@ -72,7 +66,7 @@ const EditProfile = () => {
             type="file"
             accept="image/png, image/jpeg, image/jpg"
             onChange={handlePfpChange}
-            style={{ marginTop: '0.5rem', marginLeft: '164px' }} // adjust this value as needed
+            style={{ marginTop: '0.5rem', marginLeft: '164px' }}
           />
         </div>
         <input
@@ -80,20 +74,6 @@ const EditProfile = () => {
           placeholder="Username"
           value={username}
           onChange={e => setUsername(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.5rem',
-            marginBottom: '1rem',
-            borderRadius: '8px',
-            border: '1px solid #ccc'
-          }}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={e => setName(e.target.value)}
           style={{
             width: '100%',
             padding: '0.5rem',
