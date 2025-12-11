@@ -43,7 +43,7 @@ export const create = async (fields) => {
         location,
         cost = 0,
         time,
-        photo = null
+        photo_url = null
     } = fields;
 
     // Validate required fields (non-nullables in schema)
@@ -61,7 +61,7 @@ export const create = async (fields) => {
             location,
             cost,
             time,
-            photo,
+            photo_url,
         })
         .select()
         .single();
