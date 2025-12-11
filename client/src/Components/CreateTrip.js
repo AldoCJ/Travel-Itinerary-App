@@ -221,6 +221,30 @@ function CreateTrip() {
       const created = await res.json();
       if (created && (created.id || created._id)) {
         const id = created.id ?? created._id;
+        try {
+          for (const day of itinerary) {
+            const dayPayload = {
+              date: day.date,               // ensure your day object has `date`
+              activities: day.activities.map(act => ({
+                time: act.time,
+                description: act.description,
+                location: act.location,
+              })),
+            };
+
+            const dayRes = await fetch(`/api/trips/${id}/days`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(dayPayload),
+            });
+
+            if (!dayRes.ok) {
+              console.error("Failed to add day:", await dayRes.text());
+            }
+          }
+        } catch (err) {
+          console.error("Error adding days:", err);
+        }
         navigate(`/itinerary/${id}`, { state: { trip: created } });
       } else {
         navigate('/Profile');
