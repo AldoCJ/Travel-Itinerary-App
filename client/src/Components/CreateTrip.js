@@ -165,97 +165,114 @@ function CreateTrip() {
   const addTip = () => setTips(prev => [...prev, '']);
   const removeTip = index => setTips(prev => prev.filter((_, i) => i !== index));
 
-  const onSubmit = async e => {
-    e.preventDefault();
-    if (!validate()) return;
+const onSubmit = async e => {
+  e.preventDefault();
+  if (!validate()) return;
 
-    setSubmitting(true);
-    try {
-      let thumbnailUrl = '/public-imgs/default-trip.png';
+  setSubmitting(true);
+  try {
+    let thumbnailUrl = '/public-imgs/default-trip.png';
 
-      if (thumbnailFile) {
-        // Try server upload first, fallback to data URL
-        try {
-          const uploaded = await tryUploadFileToServer(thumbnailFile);
-          if (uploaded) {
-            thumbnailUrl = uploaded;
-          } else {
-            // fallback to data URL
-            thumbnailUrl = await fileToDataUrl(thumbnailFile);
-          }
-        } catch (err) {
-          console.warn('Upload failed, falling back to data URL:', err);
-          try {
-            thumbnailUrl = await fileToDataUrl(thumbnailFile);
-          } catch (err2) {
-            console.warn('data URL fallback failed', err2);
-            thumbnailUrl = '/public-imgs/default-trip.png';
-          }
+    if (thumbnailFile) {
+      try {
+        const uploaded = await tryUploadFileToServer(thumbnailFile);
+        if (uploaded) {
+          thumbnailUrl = uploaded;
+        } else {
+          thumbnailUrl = await fileToDataUrl(thumbnailFile);
         }
-      } else if (thumbnail) {
-        thumbnailUrl = thumbnail;
+      } catch (err) {
+        console.warn('Upload failed, falling back to data URL:', err);
+        try {
+          thumbnailUrl = await fileToDataUrl(thumbnailFile);
+        } catch {
+          thumbnailUrl = '/public-imgs/default-trip.png';
+        }
       }
+    } else if (thumbnail) {
+      thumbnailUrl = thumbnail;
+    }
 
     const tripPayload = {
       user_id: "9004d534-fb61-4d6c-bdb8-a3046ccb64bb",
       title: title,
       summary: description,
       start_date: date,
-      end_date: date, 
+      end_date: date,
       number_of_people: Number(budget) || 1,
       total_price: Number(budget) || 0,
     };
 
+    const res = await fetch('/api/trips', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(tripPayload),
+    });
 
-      const res = await fetch('/api/trips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(tripPayload),
-      });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || 'Failed to create trip');
+    }
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || 'Failed to create trip');
-      }
+    const createdTrip = await res.json();
+    const tripId = createdTrip.id ?? createdTrip._id;
 
-      const created = await res.json();
-      if (created && (created.id || created._id)) {
-        const id = created.id ?? created._id;
-        try {
-          for (const day of itinerary) {
-            const dayPayload = {
-              date: day.date,               // ensure your day object has `date`
-              activities: day.activities.map(act => ({
-                time: act.time,
-                description: act.description,
-                location: act.location,
-              })),
-            };
+    if (tripId) {
+      // For each day, create a day first, then post each activity as an event
+      for (const day of itinerary) {
+        const dayPayload = { date: day.date };
+        const dayRes = await fetch(`/api/trips/${tripId}/days`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dayPayload),
+        });
 
-            const dayRes = await fetch(`/api/trips/${id}/days`, {
+        if (!dayRes.ok) {
+          console.error("Failed to create day:", await dayRes.text());
+          continue; // skip to next day
+        }
+
+        const createdDay = await dayRes.json();
+        const dayId = createdDay.id ?? createdDay._id;
+
+        // POST each activity as an event
+        for (const act of day.activities) {
+          const eventPayload = {
+            title: act.description,
+            notes: act.notes || '',
+            location: act.location,
+            cost: act.cost || '0',
+            time: act.time,
+            photo_url: act.photo_url || '',
+          };
+
+          const eventRes = await fetch(
+            `/api/trips/${tripId}/days/${dayId}/events`,
+            {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(dayPayload),
-            });
-
-            if (!dayRes.ok) {
-              console.error("Failed to add day:", await dayRes.text());
+              body: JSON.stringify(eventPayload),
             }
+          );
+
+          if (!eventRes.ok) {
+            console.error("Failed to add event:", await eventRes.text());
           }
-        } catch (err) {
-          console.error("Error adding days:", err);
         }
-        navigate(`/itinerary/${id}`, { state: { trip: created } });
-      } else {
-        navigate('/Profile');
       }
-    } catch (error) {
-      console.error('Create trip error:', error);
-      alert('Failed to create trip. See console for details.');
-    } finally {
-      setSubmitting(false);
+
+      navigate(`/itinerary/${tripId}`, { state: { trip: createdTrip } });
+    } else {
+      navigate('/Profile');
     }
-  };
+  } catch (error) {
+    console.error('Create trip error:', error);
+    alert('Failed to create trip. See console for details.');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   // format yyyy-mm-dd -> user locale short date
   const formatDateDisplay = (isoDate) => {
