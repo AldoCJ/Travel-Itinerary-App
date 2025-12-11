@@ -1,13 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function Login() {
     const navigate = useNavigate();
 
-    const handleLogin = (e) => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+
+    const handleLogin = async (e) => {
         e.preventDefault();
-        // Add authentication logic here
-        navigate('/Home');
+        setError("");
+
+        try {
+            const response = await axios.post("/api/auth/signin", {
+                email,
+                password
+            });
+
+            if (!response.data?.access_token) {
+                setError("Login failed: No token returned.");
+                return;
+            }
+
+            // Save token + user
+            localStorage.setItem("token", response.data.access_token);
+            localStorage.setItem("user", JSON.stringify(response.data.user));
+
+            navigate("/Home");
+        } catch (err) {
+            if (err.response) {
+                setError(err.response.data?.error || "Login failed.");
+            } else {
+                setError("Network error. Please try again.");
+            }
+        }
     };
 
     return (
@@ -39,13 +67,24 @@ function Login() {
                     border: '8px solid #f8f8f8'
                 }}
             >
-                <header style={{ color: '#f8f8d8', fontSize: '2rem', marginBottom: '24px' }}>Login</header>
+                <header style={{ color: '#f8f8d8', fontSize: '2rem', marginBottom: '24px' }}>
+                    Login
+                </header>
+
+                {error && (
+                    <div style={{ color: 'red', marginBottom: '16px', fontSize: '1rem' }}>
+                        {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleLogin}>
                     <input
                         className="user form-control"
-                        type="text"
-                        placeholder="Username"
+                        type="email"
+                        placeholder="Email"
                         required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         style={{ marginBottom: '20px', width: '100%' }}
                     />
                     <br />
@@ -54,6 +93,8 @@ function Login() {
                         type="password"
                         placeholder="Password"
                         required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         style={{ marginBottom: '20px', width: '100%' }}
                     />
                     <br />
@@ -76,6 +117,7 @@ function Login() {
                         Login
                     </button>
                 </form>
+
                 <div style={{ marginTop: '24px', color: 'white', fontSize: '1.2rem' }}>
                     Don't have an account?{' '}
                     <NavLink to="/Register" style={{ color: '#90caf9', textDecoration: 'underline' }}>

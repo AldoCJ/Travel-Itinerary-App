@@ -16,7 +16,7 @@ app.use(express.json()); // Middleware to parse JSON bodies
 // Routes
 app.use("/auth", authRoutes);
 
-// app.use(requireAuth); // Apply authentication middleware globally except for auth routes
+app.use(requireAuth); // Apply authentication middleware globally except for auth routes
 
 app.use("/trips", tripRoutes);
 app.use("/users", userRoutes);

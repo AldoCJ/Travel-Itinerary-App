@@ -85,5 +85,35 @@ router.post("/signin", asyncHandler(async (req, res) => {
     });
 }));
 
+// Delete currently authenticated user
+router.delete(
+    "/delete-account",
+    asyncHandler(async (req, res) => {
+        const token = req.headers.authorization?.split(" ")[1];
+        if (!token) return res.status(401).json({ error: "Missing auth token" });
+
+        const supabaseAdmin = getSupabaseAdminClient();
+
+        // Get user via token
+        const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+        if (userError || !userData?.user) {
+            return res.status(401).json({ error: "Invalid or expired token" });
+        }
+
+        const authId = userData.user.id;
+
+        // Delete from Users table
+        await supabaseAdmin.from("Users").delete().eq("auth_id", authId);
+
+        // Delete Supabase auth user
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(authId);
+        if (deleteError) {
+            return res.status(500).json({ error: deleteError.message });
+        }
+
+        res.status(200).json({ message: "Account deleted successfully" });
+    })
+);
+
 
 export default router;

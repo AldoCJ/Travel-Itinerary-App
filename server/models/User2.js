@@ -14,25 +14,38 @@ export const getById = async (id) => {
   return data;
 };
 
-// 🟢 Delete a user
+// Delete a user
 export const remove = async (id) => {
-  const { error } = await supabase
-    .from("Users")
-    .delete()
-    .eq("id", id);
+    // 1. Check if user exists
+    const { data: user, error: userError } = await supabase
+        .from("Users")
+        .select("id")
+        .eq("id", id)
+        .single();
 
-  if (error) throw error;
-  return { message: "User deleted successfully" };
+    if (userError) throw userError;
+    if (!user) throw new Error("User not found");
+
+    // 2. Delete user (Supabase will handle FK with CASCADE if enabled)
+    const { error: deleteError } = await supabase
+        .from("Users")
+        .delete()
+        .eq("id", id);
+
+    if (deleteError) throw deleteError;
+
+    // 3. Return clean message for controller
+    return "User deleted successfully";
 };
 
-// 🟢 Get all users
+// Get all users
 export const getAll = async () => {
   const { data, error } = await supabase.from("Users").select("*");
   if (error) throw error;
   return data;
 };
 
-// 🟢 Update user profile (public fields only)
+// Update user profile (public fields only)
 export const update = async (id, updates) => {
   if (!updates || Object.keys(updates).length === 0) return null;
 
