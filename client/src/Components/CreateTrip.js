@@ -196,26 +196,16 @@ function CreateTrip() {
         thumbnailUrl = thumbnail;
       }
 
-      const tripPayload = {
-        title: title.trim(),
-        destination: destination.trim(),
-        duration: duration.trim(),
-        thumbnail: thumbnailUrl,
-        date: date || new Date().toISOString().split('T')[0],
-        description: description.trim(),
-        itinerary: itinerary.map(day => ({
-          date: day.date || undefined,
-          activities: day.activities
-            .map(a => ({
-              time: a.time.trim(),
-              description: a.description.trim(),
-              location: a.location.trim() || undefined,
-            }))
-            .filter(a => a.description || a.time), // drop empty activities
-        })),
-        tips: tips.map(t => t.trim()).filter(Boolean),
-        budget: budget.trim(),
-      };
+    const tripPayload = {
+      user_id: "9004d534-fb61-4d6c-bdb8-a3046ccb64bb",
+      title: title,
+      summary: description,
+      start_date: date,
+      end_date: date, 
+      number_of_people: Number(budget) || 1,
+      total_price: Number(budget) || 0,
+    };
+
 
       const res = await fetch('/api/trips', {
         method: 'POST',
