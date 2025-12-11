@@ -65,7 +65,7 @@ function Profile() {
                     
                     <div className="profile-details">
                         <div className="profile-names">
-                            <h2 className="full-name">{user.fullName}</h2>
+                            {/* Remove full name, only show username */}
                             <h3 className="username">@{user.username}</h3>
                         </div>
 

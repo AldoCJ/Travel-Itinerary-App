@@ -9,6 +9,7 @@ import EditProfile from './Components/EditProfile';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import TestAPI from './TestAPI';
 import Settings from './Components/Settings';
+import Register from './Components/Register';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
                       <Route path="/edit-itinerary/:id" element={<EditTrip />} />
                       <Route path="/edit-profile/" element={<EditProfile />} />
                       <Route path="/settings" element={<Settings />} />
+                      <Route path="/Register" element={<Register />} />
                     </Routes>
                 </BrowserRouter>
             </div>
