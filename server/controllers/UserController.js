@@ -1,42 +1,37 @@
 import * as User from "../models/User2.js";
 import cloudinary from "../utils/cloudinary.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import fs from "fs";
 
 
-// 🟢 Get a user by ID
-export const getUser = async (req, res) => {
-  try {
+// Get a user by ID
+export const getUser = asyncHandler(async (req, res) => {
     const user = await User.getById(req.params.id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+        res.status(404);
+        throw new Error("User not found");
     }
-    res.json(user);
-  } catch (error) {
-    console.error("Error fetching user:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
-// 🟢 Remove a user by ID
-export const deleteUser = async (req, res) => {
-  try {
-    await User.remove(req.params.id);
-    res.json({ message: "User deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting user:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
+    res.status(200).json(user);
+});
+// Remove a user by ID
+export const deleteUser = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    if (!id) {
+        res.status(400);
+        throw new Error("userId is required");
+    }
+
+    const msg = await User.remove(id);
+
+    res.status(200).json({ message: msg });
+});
 
 // Get All Users
-export const getAllUsers = async (req, res) => {
-    try {
-        const users = await User.getAll();
-        res.json(users);
-    } catch (error) {
-        console.error("Error getting users:", error);
-        res.status(500).json({ error: "Failed to retrieve users" });
-    }
-};
+export const getAllUsers = asyncHandler(async (req, res) => {
+    const users = await User.getAll();
+    res.status(200).json(users);
+});
 
 // Update a User Profile (Public Data Only)
 export const updateUser = async (req, res) => {
@@ -98,13 +93,13 @@ export const updateUserProfilePicture = async (req, res) => {
     }
 }
 
-export const getUserTrips = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const trips = await User.getTripsByUserId(id);
-        res.status(200).json(trips);
-    } catch (error) {
-        console.error("Error fetching user trips:", error);
-        res.status(500).json({ error: "Failed to fetch user trips" });
+export const getUserTrips = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    if (!id) {
+        res.status(400);
+        throw new Error("Id is required.");
     }
-}
+
+    const trips = await User.getTripsByUserId(id);
+    res.status(200).json(trips);
+});
