@@ -249,7 +249,7 @@ const onSubmit = async e => {
     }
 
     const updated = await res.json();
-    navigate(`/itinerary/${id}`, { state: { trip: updated, isOwnProfile: true } });
+    navigate(`/profile`, { state: { updatedTrip: updated } });
   } catch (err) {
     console.error('Update trip error', err);
     alert('Failed to update trip. See console for details.');
@@ -279,11 +279,6 @@ const onSubmit = async e => {
               <div className="form-row">
                 <label htmlFor="trip-title" className="required">Title</label>
                 <input id="trip-title" value={title} onChange={e => setTitle(e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label htmlFor="trip-destination" className="required">Destination</label>
-                <input id="trip-destination" value={destination} onChange={e => setDestination(e.target.value)} />
               </div>
 
               <div className="form-row two-up">
