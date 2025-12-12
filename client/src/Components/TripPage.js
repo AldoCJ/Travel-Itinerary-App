@@ -157,7 +157,7 @@ function TripPage() {
                     <h1>{trip.title}</h1>
                     <div className="trip-meta">
                         <span className="duration">⏱️ {trip.duration}</span>
-                        <span className="likes">$️ {trip.likes}</span>
+                        <span className="likes">$️ {trip.total_price}</span>
                     </div>
                 </div>
 
