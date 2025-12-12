@@ -22,7 +22,10 @@ function TripPage() {
 
         const fetchTripDetails = async () => {
             try {
-                const response = await fetch(`/api/trips/${id}`);
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/trips/${id}`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                });
                 if (!response.ok) {
                     console.error('Failed fetching trip details:', response.statusText);
                     setTrip(null);
@@ -44,9 +47,11 @@ function TripPage() {
     useEffect(() => {
         const fetchDays = async () => {
             try {
-                const response = await fetch(`/api/trips/${id}/days`);
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/trips/${id}/days`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                });
                 if (response.status === 404) {
-                    // No days exist for this trip → treat as empty
                     console.warn("No days found for this trip.");
                     setDays([]);
                     return;
@@ -69,11 +74,18 @@ function TripPage() {
     useEffect(() => {
         if (days.length === 0) return;
         const fetchEventsForDays = async () => {
+            const token = localStorage.getItem('token');
             const updatedDays = await Promise.all(
                 days.map(async (day) => {
                     try {
-                        const res = await fetch(`/api/trips/${id}/days/${day.id}/events`);
+                        const res = await fetch(`/api/trips/${id}/days/${day.id}/events`, {
+                            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                        });
                         if (res.status === 404) {
+                            return { ...day, events: [] };
+                        }
+                        if (!res.ok) {
+                            console.error("Failed fetching events for day:", await res.text());
                             return { ...day, events: [] };
                         }
                         const events = await res.json();
@@ -88,7 +100,6 @@ function TripPage() {
         };
         fetchEventsForDays();
     }, [days.length, id]);
-
 
     // Close modal helper
     const closeDeleteModal = () => {
@@ -110,12 +121,15 @@ function TripPage() {
         if (!trip) return;
         setDeleting(true);
         try {
-            const res = await fetch(`/api/trips/${id}`, { method: 'DELETE' });
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/trips/${id}`, {
+                method: 'DELETE',
+                headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+            });
             if (!res.ok) {
                 const errText = await res.text();
                 throw new Error(errText || 'Failed to delete trip');
             }
-            // successful delete -> go back to profile
             navigate('/Profile');
         } catch (error) {
             console.error('Delete trip error:', error);
@@ -188,30 +202,31 @@ function TripPage() {
                         )}
 
                         {!daysLoading && days.length > 0 && (
-                            days.map((day, index) => (
-                                <div key={day.id} className="day-item">
-                                    <h4>Day {index + 1}</h4>
+                            <>
+                                {days.map((day, index) => (
+                                    <div key={day.id} className="day-item">
+                                        <h4>Day {index + 1}</h4>
 
-                                    {/* Events */}
-                                    {!day.events || day.events.length === 0 ? (
-                                        <p>No events for this day.</p>
-                                    ) : (
-                                        <ul>
-                                            {day.events.map((event, actIndex) => (
-                                                <li key={event.id || actIndex}>
-                                                    <strong>{event.time || "No time"}</strong>
-                                                    {" – "}
-                                                    {event.title || event.description || "Untitled Event"}
-                                                    {event.location && (
-                                                        <span className="location"> 📍 {event.location}</span>
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-
-                                </div>
-                            ))
+                                        {/* Events */}
+                                        {!day.events || day.events.length === 0 ? (
+                                            <p>No events for this day.</p>
+                                        ) : (
+                                            <ul>
+                                                {day.events.map((event, actIndex) => (
+                                                    <li key={event.id || actIndex}>
+                                                        <strong>{event.time || "No time"}</strong>
+                                                        {" – "}
+                                                        {event.title || event.description || "Untitled Event"}
+                                                        {event.location && (
+                                                            <span className="location"> 📍 {event.location}</span>
+                                                        )}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                ))}
+                            </>
                         )}
                     </div>
 

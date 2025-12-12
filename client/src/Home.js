@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Header from './Components/Header';
 import TripGrid from './Components/TripGrid';
+import api from './api/axiosInstance';
 
 function Home() {
     const [posts, setPosts] = useState([]);
@@ -29,7 +30,7 @@ function Home() {
         setLoading(true);
         setError(null);
 
-        axios.get('/api/trips')
+        api.get('/trips')
             .then((res) => {
                 if (!active) return;
                 setPosts(mapTrips(res.data));
@@ -52,7 +53,7 @@ function Home() {
             setLoading(true);
             setError(null);
 
-            axios.get('/api/trips')
+            api.get('/trips')
                 .then((res) => {
                     if (!active) return;
                     setPosts(mapTrips(res.data));
@@ -73,7 +74,10 @@ function Home() {
 
         axios.get('/api/trips/search', {
             params: { query },
-            signal: controller.signal
+            signal: controller.signal,
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token') || ''}`
+            }
         })
             .then((res) => {
                 setPosts(mapTrips(res.data || []));

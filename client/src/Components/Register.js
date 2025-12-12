@@ -20,20 +20,29 @@ function Register() {
             await signUp(email, password, name);
 
             // 2. Auto-login
-            const loginData = await signIn(email, password);
+            const loginRes = await signIn(email, password);
 
-            // 3. Save token + user
-            localStorage.setItem("token", loginData.access_token);
-            localStorage.setItem("user", JSON.stringify(loginData.user));
+            // 3. Save token + user in localStorage
+            localStorage.setItem("token", loginRes.token);
+            localStorage.setItem("user", JSON.stringify({
+                id: loginRes.user.id,
+                auth_id: loginRes.user.auth_id,
+                username: loginRes.user.username,
+                email: loginRes.user.email,
+                name: loginRes.user.name,
+                profileImage: loginRes.user.profile_pic_url
+            }));
 
             // 4. Redirect
-            navigate('/Home');
+            navigate("/Home");
+
 
         } catch (err) {
-            console.error(err);
-            setError(err.response?.data?.error || "Registration failed");
+            console.error("Registration error:", err);
+            setError(err.response?.data?.error || err.message || "Registration failed");
         }
     };
+
 
     return (
         <div style={{

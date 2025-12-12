@@ -1,53 +1,75 @@
 import './App.css';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from './api/axiosInstance';
 import TripGrid from './Components/TripGrid';
 
 function Profile() {
-    // Mock user data - replace with API call
-    const [user] = useState({
-        username: 'wanderlust_traveler',
-        fullName: 'Alex Johnson',
-        bio: 'Travel enthusiast sharing amazing itineraries from around the world 🌍✈️',
-        profileImage: '/public-imgs/tennisbirdpfp.png', 
-        postCount: 6,
-
-        isOwnProfile: true
-    });
-
+    const [user, setUser] = useState(null);
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
-        axios.get('/api/trips')
-            .then((res) => {
-                // Map API data to match the format your TripGrid expects
-                const formattedPosts = res.data.map(trip => ({
+        let isMounted = true;
+
+        const fetchUserAndTrips = async () => {
+            try {
+                const storedToken = localStorage.getItem('token');
+                const storedUserJson = localStorage.getItem('user');
+
+                if (!storedToken || !storedUserJson) {
+                    throw new Error('Not authenticated. Please sign in.');
+                }
+
+                const currentUser = JSON.parse(storedUserJson);
+                const userId = currentUser?.id;
+                if (!userId) {
+                    throw new Error('Invalid user data. Please sign in again.');
+                }
+
+                // Fetch only this user's trips using /trips?userId=...
+                const tripsRes = await api.get('/trips', { params: { userId } });
+
+                const formattedPosts = (Array.isArray(tripsRes.data) ? tripsRes.data : []).map(trip => ({
                     id: trip.id,
-                    title: trip.title,
-                    destination: trip.summary, // or wherever you want
-                    duration: `${trip.start_date.slice(0, 10)} → ${trip.end_date.slice(0, 10)}`,
-                    thumbnail: '/public-imgs/tokyopic.png', // placeholder if API has no image
-                    likes: trip.number_of_people, // or another field if you have
-                    date: trip.start_date.slice(0, 10)
+                    title: trip.title ?? 'Untitled',
+                    destination: trip.summary ?? '',
+                    duration: `${String(trip.start_date ?? '').slice(0, 10)} → ${String(trip.end_date ?? '').slice(0, 10)}`,
+                    thumbnail: trip.photo_url || '/public-imgs/tokyopic.png',
+                    likes: trip.number_of_people ?? 0,
+                    date: String(trip.start_date ?? '').slice(0, 10)
                 }));
+
+                if (!isMounted) return;
+
+                setUser({
+                    username: currentUser.username || currentUser.email || currentUser.name || 'user',
+                    fullName: currentUser.name || '',
+                    bio: currentUser.bio ?? '',
+                    profileImage: currentUser.profileImage ?? '/public-imgs/tennisbirdpfp.png',
+                    postCount: formattedPosts.length,
+                    isOwnProfile: true
+                });
+
                 setPosts(formattedPosts);
                 setLoading(false);
-            })
-            .catch((err) => {
-                setError(err.message);
+            } catch (err) {
+                if (!isMounted) return;
+                setError(err.response?.data?.error || err.message);
                 setLoading(false);
-            });
+            }
+        };
+
+        fetchUserAndTrips();
+        return () => { isMounted = false; };
     }, []);
 
     if (loading) return <h3>Loading trips...</h3>;
     if (error) return <h3>Error: {error}</h3>;
+    if (!user) return <h3>No user found.</h3>;
 
-
-    // Mock travel posts (full trip shape) - replace with API call
     return (
         <div className="Profile">
             <NavLink to="/Home" className="back-button-clean">← Home</NavLink>
@@ -58,14 +80,13 @@ function Profile() {
                     <div className="profile-image-section">
                         <img 
                             src={user.profileImage} 
-                            alt={user.fullName}
+                            alt={user.fullName || user.username}
                             className="profile-image"
                         />
                     </div>
                     
                     <div className="profile-details">
                         <div className="profile-names">
-                            {/* Remove full name, only show username */}
                             <h3 className="username">@{user.username}</h3>
                         </div>
 
@@ -75,7 +96,7 @@ function Profile() {
                             </span>
                         </div>
 
-                        <p className="bio-text">{user.bio}</p>
+                        {user.bio && <p className="bio-text">{user.bio}</p>}
 
                         {user.isOwnProfile ? (
                             <div className="profile-actions">

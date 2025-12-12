@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosInstance';
 
 function Login() {
     const navigate = useNavigate();
@@ -8,13 +8,13 @@ function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-
+    console.log("rerender");
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
 
         try {
-            const response = await axios.post("/api/auth/signin", {
+            const response = await api.post("/auth/signin", {
                 email,
                 password
             });
@@ -26,7 +26,15 @@ function Login() {
 
             // Save token + user
             localStorage.setItem("token", response.data.access_token);
-            localStorage.setItem("user", JSON.stringify(response.data.user));
+            localStorage.setItem("user", JSON.stringify({
+                id: response.data.user.id,         // Users table ID
+                auth_id: response.data.user.auth_id, // Supabase auth ID
+                username: response.data.user.username,
+                email: response.data.user.email,
+                name: response.data.user.name,
+                profileImage: response.data.user.profile_pic_url
+            }));
+
 
             navigate("/Home");
         } catch (err) {

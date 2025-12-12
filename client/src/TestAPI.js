@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from './api/axiosInstance';
 import React, { useState, useEffect } from 'react';
 
 function TestAPI() {
@@ -7,13 +7,13 @@ function TestAPI() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        axios.get('/api/trips')
+        api.get('/trips')
             .then((res) => {
                 setData(res.data);
                 setLoading(false);
             })
             .catch((err) => {
-                setError(err.message);
+                setError(err.response?.data?.error || err.message);
                 setLoading(false);
             });
     }, []);
