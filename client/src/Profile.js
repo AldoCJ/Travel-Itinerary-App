@@ -39,6 +39,7 @@ function Profile() {
                     duration: `${String(trip.start_date ?? '').slice(0, 10)} → ${String(trip.end_date ?? '').slice(0, 10)}`,
                     thumbnail: trip.photo_url || '/public-imgs/tokyopic.png',
                     likes: trip.number_of_people ?? 0,
+                    total_price: trip.total_price ?? 0,
                     date: String(trip.start_date ?? '').slice(0, 10)
                 }));
 

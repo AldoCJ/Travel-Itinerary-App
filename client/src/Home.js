@@ -13,14 +13,16 @@ function Home() {
 
     // Helper to map API trips to TripGrid format
     const mapTrips = (trips) => {
+        console.log(trips);
         return trips.map(trip => ({
             id: trip.id,
             title: trip.title,
             destination: trip.summary,
-            duration: `${trip.start_date.slice(0, 10)} → ${trip.end_date.slice(0, 10)}`,
+            duration: `${trip.start_date} → ${trip.end_date}`,
             thumbnail: trip.photo_url || '/public-imgs/tokyopic.png',
             likes: trip.number_of_people,
-            date: trip.start_date.slice(0, 10)
+            total_price: trip.total_price,
+            date: trip.start_date
         }));
     };
 

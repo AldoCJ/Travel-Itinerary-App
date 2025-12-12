@@ -156,9 +156,8 @@ function TripPage() {
                 <div style={{ flex: 1, textAlign: 'left' }}>
                     <h1>{trip.title}</h1>
                     <div className="trip-meta">
-                        <span className="destination">📍 {trip.destination}</span>
                         <span className="duration">⏱️ {trip.duration}</span>
-                        <span className="likes">$️ {trip.likes}</span>
+                        <span className="likes">$️ {trip.total_price}</span>
                     </div>
                 </div>
 
@@ -231,24 +230,8 @@ function TripPage() {
                     </div>
 
                     <div className="additional-info">
-                        <h3>Additional Information</h3>
-                        {trip.tips && (
-                            <div className="travel-tips">
-                                <h4>Travel Tips</h4>
-                                <ul>
-                                    {trip.tips.map((tip, index) => (
-                                        <li key={index}>{tip}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
-                        {trip.budget && (
-                            <div className="budget-info">
-                                <h4>Estimated Budget</h4>
-                                <p>{trip.budget}</p>
-                            </div>
-                        )}
+                        <h3>Summary</h3>
+                        <p>{trip.destination}</p>
                     </div>
                 </div>
             </div>

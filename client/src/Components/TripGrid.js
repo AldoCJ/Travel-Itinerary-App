@@ -2,6 +2,7 @@
 import { NavLink } from 'react-router-dom';
 
 function TripGrid({ posts, isOwnProfile }) {
+    console.log('posts:', posts);
     return (
         <div className="posts-section">
             <div className="posts-header">
@@ -24,13 +25,12 @@ function TripGrid({ posts, isOwnProfile }) {
                                 <img src={post.thumbnail} alt={post.title} />
                                 <div className="post-overlay">
                                     <span className="post-stats">
-                                        $ {post.likes}
+                                        $ {post.total_price}
                                     </span>
                                 </div>
                             </div>
                             <div className="post-info-small">
                                 <h4 className="post-title-small">{post.title}</h4>
-                                <p className="post-destination-small">{post.destination}</p>
                                 <p className="post-duration-small">{post.duration}</p>
                             </div>
                         </NavLink>
