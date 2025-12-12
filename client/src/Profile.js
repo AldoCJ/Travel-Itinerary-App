@@ -29,6 +29,10 @@ function Profile() {
                     throw new Error('Invalid user data. Please sign in again.');
                 }
 
+                // Fetch user data by ID
+                const userRes = await api.get(`/users/${userId}`);
+                const userData = userRes.data;
+
                 // Fetch only this user's trips using /trips?userId=...
                 const tripsRes = await api.get('/trips', { params: { userId } });
 
@@ -47,11 +51,11 @@ function Profile() {
                 if (!isMounted) return;
 
                 setUser({
-                    username: currentUser.username || currentUser.email || currentUser.name || 'user',
-                    fullName: currentUser.name || '',
-                    bio: currentUser.bio ?? '',
-                    profileImage: currentUser.profileImage ?? '/public-imgs/tennisbirdpfp.png',
-                    postCount: formattedPosts.length,
+                    username: userData.username || userData.email || userData.name || 'user',
+                    fullName: userData.name || '',
+                    bio: userData.about_me ?? '',
+                    profileImage: userData.profile_pic_url ?? '/public-imgs/defaultPfp copy.jpg',
+                    postCount: formattedPosts.length,   
                     isOwnProfile: true
                 });
 
@@ -89,7 +93,7 @@ function Profile() {
                     
                     <div className="profile-details">
                         <div className="profile-names">
-                            <h3 className="username">@{user.username}</h3>
+                            <h3 className="username">{user.username}</h3>
                         </div>
 
                         <div className="profile-stats">
