@@ -377,18 +377,6 @@ const onSubmit = async e => {
                   ))}
                 </div>
 
-                <div className="card tips-editor">
-                  <h2 className="card-title">Travel Tips</h2>
-                  {tips.map((t, i) => (
-                    <div key={i} className="tip-row">
-                      <input value={t} onChange={e => updateTip(i, e.target.value)} />
-                      {tips.length > 1 && <button type="button" className="small-btn ghost" onClick={() => removeTip(i)}>Remove</button>}
-                    </div>
-                  ))}
-                  <div className="tips-actions">
-                    <button type="button" className="btn" onClick={addTip}>+ Add Tip</button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
