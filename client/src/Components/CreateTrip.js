@@ -501,30 +501,6 @@ function CreateTrip() {
                   </div>
                 </div>
 
-                <div className="card tips-editor">
-                  <h2 className="card-title">Travel Tips</h2>
-
-                  {tips.map((t, i) => (
-                    <div key={i} className="tip-row">
-                      <input value={t} onChange={e => updateTip(i, e.target.value)} placeholder="Tip (e.g. buy local transit card)" />
-                      {tips.length > 1 && (
-                        <button
-                          type="button"
-                          className="small-btn ghost"
-                          onClick={() => removeTip(i)}
-                          aria-label={`Remove tip ${i + 1}`}
-                          title="Remove tip"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  ))}
-
-                  <div className="tips-actions">
-                    <button type="button" className="btn" onClick={addTip}>+ Add Tip</button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
