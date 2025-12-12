@@ -24,7 +24,7 @@ function TripGrid({ posts, isOwnProfile }) {
                                 <img src={post.thumbnail} alt={post.title} />
                                 <div className="post-overlay">
                                     <span className="post-stats">
-                                        ❤️ {post.likes}
+                                        $ {post.likes}
                                     </span>
                                 </div>
                             </div>
