@@ -22,7 +22,6 @@ function EditTrip() {
   const [budget, setBudget] = useState('');
   const [people, setPeople] = useState('');
 
-  // New: days with events
   const [days, setDays] = useState([]);
   const [daysLoading, setDaysLoading] = useState(true);
 
@@ -34,12 +33,12 @@ function EditTrip() {
     const populateTrip = trip => {
       setTitle(trip.title || '');
       setDestination(trip.destination || '');
-      setThumbnail(trip.thumbnail || '');
-      setThumbnailPreview(trip.thumbnail || '');
+      setThumbnail(trip.thumbnail || trip.photo_url || '');
+      setThumbnailPreview(trip.thumbnail || trip.photo_url || '');
       prevPreviewIsObjectRef.current = false;
 
       const start = trip.start_date || trip.date || '';
-      const end = trip.end_date || '';
+      const end = trip.endDate || '';
       setDate(start ? String(start).split('T')[0] : '');
       setEndDate(end ? String(end).split('T')[0] : '');
 
@@ -104,7 +103,6 @@ function EditTrip() {
           })
         );
 
-        // If no days returned, create default
         if (updatedDays.length === 0) {
           setDays([{ id: 'temp-0', activities: [{ time: '', description: '', location: '' }] }]);
         } else {
@@ -179,29 +177,6 @@ function EditTrip() {
     return true;
   };
 
-  const fileToDataUrl = file =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  async function tryUploadFileToServer(file) {
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('/api/upload', {
-      method: 'POST',
-      body: fd,
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(text || 'Upload failed');
-    }
-    const data = await res.json();
-    return data.url || data.path || data.filename || data.fileUrl || null;
-  }
-
   // ---------------- ITINERARY EDITING ----------------
   const addDay = () =>
     setDays(prev => [...prev, { id: `temp-${prev.length}`, activities: [{ time: '', description: '', location: '' }] }]);
@@ -241,131 +216,131 @@ function EditTrip() {
       )
     );
 
-  // ---------------- TIPS ----------------
   const updateTip = (index, value) => setTips(prev => prev.map((t, i) => (i === index ? value : t)));
   const addTip = () => setTips(prev => [...prev, '']);
   const removeTip = index => setTips(prev => prev.filter((_, i) => i !== index));
 
   // ---------------- SUBMIT ----------------
   const onSubmit = async e => {
-  e.preventDefault();
-  if (!validate()) return;
+    e.preventDefault();
+    if (!validate()) return;
 
-  setSubmitting(true);
+    setSubmitting(true);
 
-  try {
-    let thumbnailUrl = '/public-imgs/default-trip.png';
+    try {
+      const token = localStorage.getItem('token');
 
-    if (thumbnailFile) {
-      try {
-        const uploaded = await tryUploadFileToServer(thumbnailFile);
-        if (uploaded) thumbnailUrl = uploaded;
-        else thumbnailUrl = await fileToDataUrl(thumbnailFile);
-      } catch (err) {
-        console.warn('Upload failed, falling back to data URL:', err);
-        try {
-          thumbnailUrl = await fileToDataUrl(thumbnailFile);
-        } catch {
-          thumbnailUrl = '/public-imgs/default-trip.png';
-        }
-      }
-    } else if (thumbnail) {
-      thumbnailUrl = thumbnail;
-    }
+      // First PATCH trip info WITHOUT photo_url
+      const patchPayload = {
+        title: title.trim(),
+        destination: destination.trim(),
+        description: description.trim(),
+        start_date: date || new Date().toISOString().split('T')[0],
+        end_date: endDate || date || new Date().toISOString().split('T')[0],
+        total_price: Number(budget) || 0,
+        number_of_people: parseInt(people, 10) || 1
+      };
 
-    // PATCH trip info first
-    const patchPayload = {
-      title: title.trim(),
-      description: description.trim(),
-      start_date: date || new Date().toISOString().split('T')[0],
-      end_date: endDate || date || new Date().toISOString().split('T')[0],
-      total_price: Number(budget) || 0,
-      number_of_people: parseInt(people, 10) || 1,
-      photo_url: thumbnailUrl,
-    };
-
-    const token = localStorage.getItem('token');
-    const res = await fetch(`/api/trips/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(patchPayload),
-    });
-
-    if (!res.ok) throw new Error(await res.text() || 'Failed to update trip');
-
-    // DELETE all existing days
-    for (const day of days) {
-      if (!day.id) continue; // skip temp days without ID
-      try {
-        await fetch(`/api/trips/${id}/days/${day.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-      } catch (err) {
-        console.error(`Failed to delete day ${day.id}`, err);
-      }
-    }
-
-    // CREATE all days and their activities
-    for (const day of days) {
-      // create day first
-      const dayPayload = { date: day.date || null };
-      const dayRes = await fetch(`/api/trips/${id}/days`, {
-        method: 'POST',
+      const res = await fetch(`/api/trips/${id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(dayPayload),
+        body: JSON.stringify(patchPayload)
       });
 
-      if (!dayRes.ok) {
-        console.error('Failed to create day:', await dayRes.text());
-        continue;
+      if (!res.ok) throw new Error(await res.text() || 'Failed to update trip');
+
+      // --- NEW: If a new thumbnail file is chosen, upload it ---
+      if (thumbnailFile) {
+        try {
+          const picForm = new FormData();
+          picForm.append('picture', thumbnailFile);
+
+          const picRes = await fetch(`/api/trips/${id}/picture`, {
+            method: 'PATCH',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: picForm
+          });
+
+          if (!picRes.ok) {
+            console.error("Failed to upload trip picture:", await picRes.text());
+          }
+        } catch (err) {
+          console.error("Error uploading trip picture:", err);
+        }
       }
 
-      const createdDay = await dayRes.json();
-      const dayId = createdDay.id ?? createdDay._id;
+      // DELETE all existing days
+      for (const day of days) {
+        if (!day.id) continue;
+        try {
+          await fetch(`/api/trips/${id}/days/${day.id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+        } catch (err) {
+          console.error(`Failed to delete day ${day.id}`, err);
+        }
+      }
 
-      // create activities/events
-      for (const act of day.activities) {
-        const eventPayload = {
-          title: act.description,
-          notes: act.notes || '',
-          location: act.location,
-          cost: act.cost || '0',
-          time: act.time,
-          photo_url: act.photo_url || '',
-        };
-
-        const eventRes = await fetch(`/api/trips/${id}/days/${dayId}/events`, {
+      // CREATE days & activities
+      for (const day of days) {
+        const dayPayload = { date: day.date || null };
+        const dayRes = await fetch(`/api/trips/${id}/days`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
-          body: JSON.stringify(eventPayload),
+          body: JSON.stringify(dayPayload)
         });
 
-        if (!eventRes.ok) console.error('Failed to create event:', await eventRes.text());
+        if (!dayRes.ok) {
+          console.error('Failed to create day:', await dayRes.text());
+          continue;
+        }
+
+        const createdDay = await dayRes.json();
+        const dayId = createdDay.id ?? createdDay._id;
+
+        for (const act of day.activities) {
+          const eventPayload = {
+            title: act.description,
+            notes: act.notes || '',
+            location: act.location,
+            cost: act.cost || '0',
+            time: act.time,
+            photo_url: act.photo_url || ''
+          };
+
+          const eventRes = await fetch(`/api/trips/${id}/days/${dayId}/events`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify(eventPayload)
+          });
+
+          if (!eventRes.ok) console.error('Failed to create event:', await eventRes.text());
+        }
       }
+
+      navigate('/Profile');
+    } catch (error) {
+      console.error('Edit trip error:', error);
+      alert('Failed to update trip. See console for details.');
+    } finally {
+      setSubmitting(false);
     }
-
-    navigate('/Profile');
-  } catch (error) {
-    console.error('Edit trip error:', error);
-    alert('Failed to update trip. See console for details.');
-  } finally {
-    setSubmitting(false);
-  }
-};
-
+  };
 
   if (loading || daysLoading) return <div className="loading">Loading...</div>;
 
@@ -423,15 +398,19 @@ function EditTrip() {
                 {thumbnailPreview && (
                   <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
                     <img src={thumbnailPreview} alt="thumbnail preview" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8 }} />
-                    <button type="button" className="small-btn ghost" onClick={() => {
-                      setThumbnailFile(null);
-                      if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
-                        URL.revokeObjectURL(prevPreviewUrlRef.current);
-                        prevPreviewIsObjectRef.current = false;
-                        prevPreviewUrlRef.current = null;
-                      }
-                      setThumbnailPreview(thumbnail || '');
-                    }}>
+                    <button
+                      type="button"
+                      className="small-btn ghost"
+                      onClick={() => {
+                        setThumbnailFile(null);
+                        if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+                          URL.revokeObjectURL(prevPreviewUrlRef.current);
+                          prevPreviewIsObjectRef.current = false;
+                          prevPreviewUrlRef.current = null;
+                        }
+                        setThumbnailPreview(thumbnail || '');
+                      }}
+                    >
                       Remove
                     </button>
                   </div>
