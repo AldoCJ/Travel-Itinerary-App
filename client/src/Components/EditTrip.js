@@ -16,67 +16,120 @@ function EditTrip() {
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState('');
   const [date, setDate] = useState('');
-  const [endDate, setEndDate] = useState(''); // new endDate state
+  const [endDate, setEndDate] = useState('');
   const [description, setDescription] = useState('');
   const [tips, setTips] = useState(['']);
   const [budget, setBudget] = useState('');
   const [people, setPeople] = useState('');
-  const [itinerary, setItinerary] = useState([{ activities: [{ time: '', description: '', location: '' }] }]);
+
+  // New: days with events
+  const [days, setDays] = useState([]);
+  const [daysLoading, setDaysLoading] = useState(true);
 
   const prevPreviewIsObjectRef = useRef(false);
   const prevPreviewUrlRef = useRef(null);
 
+  // ---------------- FETCH TRIP ----------------
   useEffect(() => {
-    const populate = trip => {
+    const populateTrip = trip => {
       setTitle(trip.title || '');
       setDestination(trip.destination || '');
       setThumbnail(trip.thumbnail || '');
       setThumbnailPreview(trip.thumbnail || '');
-      prevPreviewIsObjectRef.current = false; // remote URL, not object URL
+      prevPreviewIsObjectRef.current = false;
 
-      // robust start/end parsing: prefer explicit fields, then fall back to date/duration strings
-      const start = trip.start_date || trip.date || (trip.duration ? trip.duration.split('→')[0]?.trim() : '');
-      const end = trip.end_date || (trip.duration ? trip.duration.split('→')[1]?.trim() : '');
-
+      const start = trip.start_date || trip.date || '';
+      const end = trip.end_date || '';
       setDate(start ? String(start).split('T')[0] : '');
       setEndDate(end ? String(end).split('T')[0] : '');
 
       setDescription(trip.destination || '');
-      setTips((trip.tips && trip.tips.length) ? trip.tips : ['']);
+      setTips(trip.tips?.length ? trip.tips : ['']);
       setBudget(trip.total_price || '');
       setPeople(trip.likes ? String(trip.likes) : '');
-      setItinerary((trip.itinerary && trip.itinerary.length) ? trip.itinerary : [{ activities: [{ time: '', description: '', location: '' }] }]);
-      setLoading(false);
     };
 
     if (stateTrip) {
-      populate(stateTrip);
+      populateTrip(stateTrip);
+      setLoading(false);
       return;
     }
 
-    // fetch trip if not provided via navigation state
     (async () => {
       try {
         const res = await fetch(`/api/trips/${id}`);
         if (!res.ok) throw new Error('Failed to fetch trip');
         const trip = await res.json();
-        populate(trip);
+        populateTrip(trip);
       } catch (err) {
         console.error('EditTrip fetch error', err);
         navigate(-1);
+      } finally {
+        setLoading(false);
       }
     })();
   }, [id, stateTrip, navigate]);
 
+  // ---------------- FETCH DAYS & EVENTS ----------------
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchDaysAndEvents = async () => {
+      try {
+        const res = await fetch(`/api/trips/${id}/days`);
+        if (!res.ok) {
+          setDays([]);
+          setDaysLoading(false);
+          return;
+        }
+        const dayData = await res.json();
+
+        const updatedDays = await Promise.all(
+          dayData.map(async day => {
+            try {
+              const evRes = await fetch(`/api/trips/${id}/days/${day.id}/events`);
+              const events = evRes.ok ? await evRes.json() : [];
+              return {
+                ...day,
+                activities: events.map(ev => ({
+                  time: ev.time || '',
+                  description: ev.title || ev.description || '',
+                  location: ev.location || ''
+                }))
+              };
+            } catch (err) {
+              console.error('Error fetching events for day', day.id, err);
+              return { ...day, activities: [] };
+            }
+          })
+        );
+
+        // If no days returned, create default
+        if (updatedDays.length === 0) {
+          setDays([{ id: 'temp-0', activities: [{ time: '', description: '', location: '' }] }]);
+        } else {
+          setDays(updatedDays);
+        }
+      } catch (err) {
+        console.error('Error fetching days', err);
+      } finally {
+        setDaysLoading(false);
+      }
+    };
+
+    fetchDaysAndEvents();
+  }, [id]);
+
+  // ---------------- CLEANUP ----------------
   useEffect(() => {
     return () => {
-      // revoke object URL if used
       if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
         URL.revokeObjectURL(prevPreviewUrlRef.current);
       }
     };
   }, []);
 
+  // ---------------- THUMBNAIL ----------------
   const handleThumbnailFileChange = e => {
     const file = e.target.files && e.target.files[0];
     if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
@@ -96,20 +149,18 @@ function EditTrip() {
     setThumbnailPreview(objUrl);
   };
 
-  // Validation: title, destination, budget, people required.
-  // For activities: if activity has time or description, location is required.
+  // ---------------- VALIDATION ----------------
   const validate = () => {
     const missing = [];
     if (!title.trim()) missing.push('Title');
     if (!destination.trim()) missing.push('Destination');
     if (!budget.toString().trim()) missing.push('Budget');
-
     if (!people.toString().trim() || !/^\d+$/.test(people.toString().trim()) || Number(people) <= 0) {
       missing.push('Number of people (positive integer)');
     }
 
     const missingLocations = [];
-    itinerary.forEach((day, dayIndex) => {
+    days.forEach((day, dayIndex) => {
       day.activities.forEach((act, actIndex) => {
         const hasContent = (act.description && act.description.trim()) || (act.time && act.time.trim());
         if (hasContent && (!act.location || !act.location.trim())) {
@@ -121,9 +172,7 @@ function EditTrip() {
     if (missing.length > 0 || missingLocations.length > 0) {
       let msg = '';
       if (missing.length > 0) msg += 'Please provide: ' + missing.join(', ') + '.\n';
-      if (missingLocations.length > 0) {
-        msg += 'Please add locations for: ' + missingLocations.join(', ') + '.';
-      }
+      if (missingLocations.length > 0) msg += 'Please add locations for: ' + missingLocations.join(', ') + '.';
       alert(msg);
       return false;
     }
@@ -153,14 +202,15 @@ function EditTrip() {
     return data.url || data.path || data.filename || data.fileUrl || null;
   }
 
+  // ---------------- ITINERARY EDITING ----------------
   const addDay = () =>
-    setItinerary(prev => [...prev, { activities: [{ time: '', description: '', location: '' }] }]);
+    setDays(prev => [...prev, { id: `temp-${prev.length}`, activities: [{ time: '', description: '', location: '' }] }]);
 
   const removeDay = index =>
-    setItinerary(prev => prev.filter((_, i) => i !== index));
+    setDays(prev => prev.filter((_, i) => i !== index));
 
   const addActivity = dayIndex =>
-    setItinerary(prev =>
+    setDays(prev =>
       prev.map((day, i) =>
         i === dayIndex
           ? { ...day, activities: [...day.activities, { time: '', description: '', location: '' }] }
@@ -169,7 +219,7 @@ function EditTrip() {
     );
 
   const removeActivity = (dayIndex, actIndex) =>
-    setItinerary(prev =>
+    setDays(prev =>
       prev.map((day, i) =>
         i === dayIndex
           ? { ...day, activities: day.activities.filter((_, j) => j !== actIndex) }
@@ -178,7 +228,7 @@ function EditTrip() {
     );
 
   const updateActivity = (dayIndex, actIndex, field, value) =>
-    setItinerary(prev =>
+    setDays(prev =>
       prev.map((day, i) =>
         i === dayIndex
           ? {
@@ -191,19 +241,20 @@ function EditTrip() {
       )
     );
 
-  const updateTip = (index, value) =>
-    setTips(prev => prev.map((t, i) => (i === index ? value : t)));
-
+  // ---------------- TIPS ----------------
+  const updateTip = (index, value) => setTips(prev => prev.map((t, i) => (i === index ? value : t)));
   const addTip = () => setTips(prev => [...prev, '']);
   const removeTip = index => setTips(prev => prev.filter((_, i) => i !== index));
 
-const onSubmit = async e => {
+  // ---------------- SUBMIT ----------------
+  const onSubmit = async e => {
   e.preventDefault();
   if (!validate()) return;
 
   setSubmitting(true);
+
   try {
-    let thumbnailUrl = thumbnail || '/public-imgs/default-trip.png';
+    let thumbnailUrl = '/public-imgs/default-trip.png';
 
     if (thumbnailFile) {
       try {
@@ -214,44 +265,101 @@ const onSubmit = async e => {
         console.warn('Upload failed, falling back to data URL:', err);
         try {
           thumbnailUrl = await fileToDataUrl(thumbnailFile);
-        } catch (err2) {
-          console.warn('data url fallback failed', err2);
-          thumbnailUrl = thumbnail || '/public-imgs/default-trip.png';
+        } catch {
+          thumbnailUrl = '/public-imgs/default-trip.png';
         }
       }
+    } else if (thumbnail) {
+      thumbnailUrl = thumbnail;
     }
 
+    // PATCH trip info first
     const patchPayload = {
       title: title.trim(),
-      summary: description.trim(),
+      description: description.trim(),
       start_date: date || new Date().toISOString().split('T')[0],
       end_date: endDate || date || new Date().toISOString().split('T')[0],
-      total_price: budget.toString().trim() || undefined,
-      number_of_people: people.toString().trim() ? parseInt(people, 10) : undefined,
+      total_price: Number(budget) || 0,
+      number_of_people: parseInt(people, 10) || 1,
       photo_url: thumbnailUrl,
     };
 
-    // Remove empty fields
-    Object.keys(patchPayload).forEach(
-      key => (patchPayload[key] === '' || patchPayload[key] === undefined) && delete patchPayload[key]
-    );
-
-    // Use relative URL to leverage frontend proxy (avoids CORS issues)
+    const token = localStorage.getItem('token');
     const res = await fetch(`/api/trips/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(patchPayload),
     });
 
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(err || 'Failed to update trip');
+    if (!res.ok) throw new Error(await res.text() || 'Failed to update trip');
+
+    // DELETE all existing days
+    for (const day of days) {
+      if (!day.id) continue; // skip temp days without ID
+      try {
+        await fetch(`/api/trips/${id}/days/${day.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+      } catch (err) {
+        console.error(`Failed to delete day ${day.id}`, err);
+      }
     }
 
-    const updated = await res.json();
-    navigate(`/profile`, { state: { updatedTrip: updated } });
-  } catch (err) {
-    console.error('Update trip error', err);
+    // CREATE all days and their activities
+    for (const day of days) {
+      // create day first
+      const dayPayload = { date: day.date || null };
+      const dayRes = await fetch(`/api/trips/${id}/days`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(dayPayload),
+      });
+
+      if (!dayRes.ok) {
+        console.error('Failed to create day:', await dayRes.text());
+        continue;
+      }
+
+      const createdDay = await dayRes.json();
+      const dayId = createdDay.id ?? createdDay._id;
+
+      // create activities/events
+      for (const act of day.activities) {
+        const eventPayload = {
+          title: act.description,
+          notes: act.notes || '',
+          location: act.location,
+          cost: act.cost || '0',
+          time: act.time,
+          photo_url: act.photo_url || '',
+        };
+
+        const eventRes = await fetch(`/api/trips/${id}/days/${dayId}/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(eventPayload),
+        });
+
+        if (!eventRes.ok) console.error('Failed to create event:', await eventRes.text());
+      }
+    }
+
+    navigate('/Profile');
+  } catch (error) {
+    console.error('Edit trip error:', error);
     alert('Failed to update trip. See console for details.');
   } finally {
     setSubmitting(false);
@@ -259,7 +367,7 @@ const onSubmit = async e => {
 };
 
 
-  if (loading) return <div className="loading">Loading...</div>;
+  if (loading || daysLoading) return <div className="loading">Loading...</div>;
 
   return (
     <div className="create-trip-page trip-page">
@@ -315,19 +423,15 @@ const onSubmit = async e => {
                 {thumbnailPreview && (
                   <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
                     <img src={thumbnailPreview} alt="thumbnail preview" style={{ width: 84, height: 84, objectFit: 'cover', borderRadius: 8 }} />
-                    <button
-                      type="button"
-                      className="small-btn ghost"
-                      onClick={() => {
-                        setThumbnailFile(null);
-                        if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
-                          URL.revokeObjectURL(prevPreviewUrlRef.current);
-                          prevPreviewIsObjectRef.current = false;
-                          prevPreviewUrlRef.current = null;
-                        }
-                        setThumbnailPreview(thumbnail || '');
-                      }}
-                    >
+                    <button type="button" className="small-btn ghost" onClick={() => {
+                      setThumbnailFile(null);
+                      if (prevPreviewIsObjectRef.current && prevPreviewUrlRef.current) {
+                        URL.revokeObjectURL(prevPreviewUrlRef.current);
+                        prevPreviewIsObjectRef.current = false;
+                        prevPreviewUrlRef.current = null;
+                      }
+                      setThumbnailPreview(thumbnail || '');
+                    }}>
                       Remove
                     </button>
                   </div>
@@ -345,13 +449,13 @@ const onSubmit = async e => {
                 <div className="card itinerary-editor">
                   <h2 className="card-title">Itinerary</h2>
 
-                  {itinerary.map((day, dayIndex) => (
-                    <div key={dayIndex} className="day-editor">
+                  {days.map((day, dayIndex) => (
+                    <div key={day.id} className="day-editor">
                       <div className="day-header">
                         <strong>Day {dayIndex + 1}</strong>
                         <div className="day-controls">
                           <button type="button" className="small-btn" onClick={() => addActivity(dayIndex)}>+ Activity</button>
-                          {itinerary.length > 1 && (
+                          {days.length > 1 && (
                             <button type="button" className="small-btn ghost" onClick={() => removeDay(dayIndex)}>Remove</button>
                           )}
                         </div>
@@ -362,9 +466,9 @@ const onSubmit = async e => {
                           <input className="act-time" placeholder="09:00" value={act.time} onChange={e => updateActivity(dayIndex, actIndex, 'time', e.target.value)} />
                           <input className="act-desc" placeholder="Activity description" value={act.description} onChange={e => updateActivity(dayIndex, actIndex, 'description', e.target.value)} />
                           <input className="act-loc" placeholder="Location*" value={act.location} onChange={e => updateActivity(dayIndex, actIndex, 'location', e.target.value)} />
-                          {!(day.activities.length === 1 && itinerary.length === 1) && (
+                          {!(day.activities.length === 1 && days.length === 1) && (
                             <button type="button" className="small-btn ghost icon-btn" onClick={() => removeActivity(dayIndex, actIndex)} title="Remove activity">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12l-4.89 4.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4z"/></svg>
+                              &times;
                             </button>
                           )}
                         </div>
@@ -375,8 +479,8 @@ const onSubmit = async e => {
                       </div>
                     </div>
                   ))}
-                </div>
 
+                </div>
               </div>
             </div>
           </div>
