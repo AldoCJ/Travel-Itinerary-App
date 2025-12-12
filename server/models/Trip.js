@@ -83,7 +83,7 @@ export const update = async (tripId, fields) => {
     setClauses.push(`updated_at = now()`);
 
     const query = `
-    UPDATE "Trips"
+    UPDATE "trips"
     SET ${setClauses.join(', ')}
     WHERE id = $${index}
     RETURNING *;

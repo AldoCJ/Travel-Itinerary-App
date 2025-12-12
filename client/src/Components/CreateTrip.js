@@ -281,7 +281,8 @@ function CreateTrip() {
                     }
                 }
 
-                navigate(`/itinerary/${tripId}`, { state: { trip: createdTrip } });
+                // navigate(`/itinerary/${tripId}`, { state: { trip: createdTrip } });
+                navigate('/Profile');
             } else {
                 navigate('/Profile');
             }
