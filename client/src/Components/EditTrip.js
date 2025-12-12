@@ -102,7 +102,7 @@ function EditTrip() {
     const missing = [];
     if (!title.trim()) missing.push('Title');
     if (!destination.trim()) missing.push('Destination');
-    if (!budget.trim()) missing.push('Budget');
+    if (!budget.toString().trim()) missing.push('Budget');
 
     if (!people.toString().trim() || !/^\d+$/.test(people.toString().trim()) || Number(people) <= 0) {
       missing.push('Number of people (positive integer)');
@@ -226,7 +226,7 @@ const onSubmit = async e => {
       summary: description.trim(),
       start_date: date || new Date().toISOString().split('T')[0],
       end_date: endDate || date || new Date().toISOString().split('T')[0],
-      total_price: budget.trim() || undefined,
+      total_price: budget.toString().trim() || undefined,
       number_of_people: people.toString().trim() ? parseInt(people, 10) : undefined,
       photo_url: thumbnailUrl,
     };
