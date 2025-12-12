@@ -33,13 +33,18 @@ function EditTrip() {
       setThumbnail(trip.thumbnail || '');
       setThumbnailPreview(trip.thumbnail || '');
       prevPreviewIsObjectRef.current = false; // remote URL, not object URL
-      // use start_date or date if present
-      setDate((trip.start_date || trip.date) ? (trip.start_date || trip.date).split('T')[0] : '');
-      setEndDate(trip.end_date ? trip.end_date.split('T')[0] : '');
-      setDescription(trip.description || '');
+
+      // robust start/end parsing: prefer explicit fields, then fall back to date/duration strings
+      const start = trip.start_date || trip.date || (trip.duration ? trip.duration.split('→')[0]?.trim() : '');
+      const end = trip.end_date || (trip.duration ? trip.duration.split('→')[1]?.trim() : '');
+
+      setDate(start ? String(start).split('T')[0] : '');
+      setEndDate(end ? String(end).split('T')[0] : '');
+
+      setDescription(trip.destination || '');
       setTips((trip.tips && trip.tips.length) ? trip.tips : ['']);
-      setBudget(trip.budget || '');
-      setPeople(trip.number_of_people ? String(trip.number_of_people) : '');
+      setBudget(trip.total_price || '');
+      setPeople(trip.likes ? String(trip.likes) : '');
       setItinerary((trip.itinerary && trip.itinerary.length) ? trip.itinerary : [{ activities: [{ time: '', description: '', location: '' }] }]);
       setLoading(false);
     };
