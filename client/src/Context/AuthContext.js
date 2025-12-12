@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
+import api from '../api/axiosInstance';
 
 export const AuthContext = createContext();
 
@@ -15,18 +16,17 @@ export function AuthProvider({ children }) {
     }, [token]);
 
     const signIn = async (email, password) => {
-        const res = await axios.post("/api/auth/signin", { email, password });
+        const response = await api.post("/auth/signin", { email, password });
 
-        setUser(res.data.user);
-        setToken(res.data.access_token);
+        if (!response.data.access_token || !response.data.user) {
+            throw new Error("Login failed: no user info or token returned.");
+        }
 
-        // Persist token
-        localStorage.setItem("token", res.data.access_token);
-
-        // Attach to axios globally
-        axios.defaults.headers.common["Authorization"] = `Bearer ${res.data.access_token}`;
-
-        return res.data;
+        // Return both token and user info
+        return {
+            token: response.data.access_token,
+            user: response.data.user
+        };
     };
 
     const signUp = async (email, password, name) => {

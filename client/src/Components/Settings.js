@@ -1,12 +1,11 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axiosInstance';
 
 const Settings = () => {
     const navigate = useNavigate();
     const [showConfirm, setShowConfirm] = useState(false);
 
-    const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user"));
 
     // LOGOUT
@@ -21,17 +20,10 @@ const Settings = () => {
         setShowConfirm(true);
     };
 
-    // CONFIRM DELETE → CALL BACKEND
+    // CONFIRM DELETE → CALL BACKEND (Authorization handled by interceptor)
     const confirmDelete = async () => {
         try {
-            const token = localStorage.getItem("token");
-
-            const res = await axios.delete(
-                `/api/users/me`,
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+            await api.delete('/users/me');
 
             localStorage.removeItem("token");
             localStorage.removeItem("user");
@@ -40,12 +32,9 @@ const Settings = () => {
             navigate("/");
         } catch (err) {
             console.error("Delete error:", err);
-            alert("Failed to delete account.");
+            alert(err.response?.data?.error || "Failed to delete account.");
         }
     };
-
-
-
 
     const cancelDelete = () => {
         setShowConfirm(false);
