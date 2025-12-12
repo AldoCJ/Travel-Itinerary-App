@@ -186,70 +186,66 @@ function EditTrip() {
   const addTip = () => setTips(prev => [...prev, '']);
   const removeTip = index => setTips(prev => prev.filter((_, i) => i !== index));
 
-  const onSubmit = async e => {
-    e.preventDefault();
-    if (!validate()) return;
+const onSubmit = async e => {
+  e.preventDefault();
+  if (!validate()) return;
 
-    setSubmitting(true);
-    try {
-      let thumbnailUrl = thumbnail || '/public-imgs/default-trip.png';
+  setSubmitting(true);
+  try {
+    let thumbnailUrl = thumbnail || '/public-imgs/default-trip.png';
 
-      if (thumbnailFile) {
+    if (thumbnailFile) {
+      try {
+        const uploaded = await tryUploadFileToServer(thumbnailFile);
+        if (uploaded) thumbnailUrl = uploaded;
+        else thumbnailUrl = await fileToDataUrl(thumbnailFile);
+      } catch (err) {
+        console.warn('Upload failed, falling back to data URL:', err);
         try {
-          const uploaded = await tryUploadFileToServer(thumbnailFile);
-          if (uploaded) thumbnailUrl = uploaded;
-          else thumbnailUrl = await fileToDataUrl(thumbnailFile);
-        } catch (err) {
-          console.warn('Upload failed, falling back to data URL:', err);
-          try {
-            thumbnailUrl = await fileToDataUrl(thumbnailFile);
-          } catch (err2) {
-            console.warn('data url fallback failed', err2);
-            thumbnailUrl = thumbnail || '/public-imgs/default-trip.png';
-          }
+          thumbnailUrl = await fileToDataUrl(thumbnailFile);
+        } catch (err2) {
+          console.warn('data url fallback failed', err2);
+          thumbnailUrl = thumbnail || '/public-imgs/default-trip.png';
         }
       }
-
-      const payload = {
-        title: title.trim(),
-        destination: destination.trim(),
-        duration: duration.trim(),
-        thumbnail: thumbnailUrl,
-        date: date || new Date().toISOString().split('T')[0],
-        description: description.trim(),
-        itinerary: itinerary.map(day => ({
-          activities: day.activities
-            .map(a => ({
-              time: a.time.trim(),
-              description: a.description.trim(),
-              location: a.location.trim() || undefined,
-            }))
-            .filter(a => a.description || a.time),
-        })),
-        tips: tips.map(t => t.trim()).filter(Boolean),
-        budget: budget.trim(),
-      };
-
-      const res = await fetch(`/api/trips/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Failed to update trip');
-      }
-
-      const updated = await res.json();
-      navigate(`/itinerary/${id}`, { state: { trip: updated, isOwnProfile: true } });
-    } catch (err) {
-      console.error('Update trip error', err);
-      alert('Failed to update trip. See console for details.');
-    } finally {
-      setSubmitting(false);
     }
-  };
+
+    const patchPayload = {
+      title: title.trim(),
+      summary: description.trim(),
+      start_date: date || new Date().toISOString().split('T')[0],
+      total_price: budget.trim() || undefined,
+      photo_url: thumbnailUrl,
+    };
+
+    // Remove empty fields
+    Object.keys(patchPayload).forEach(
+      key => (patchPayload[key] === '' || patchPayload[key] === undefined) && delete patchPayload[key]
+    );
+
+    // Use relative URL to leverage frontend proxy (avoids CORS issues)
+    const res = await fetch(`/api/trips/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patchPayload),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(err || 'Failed to update trip');
+    }
+
+    const updated = await res.json();
+    navigate(`/itinerary/${id}`, { state: { trip: updated, isOwnProfile: true } });
+  } catch (err) {
+    console.error('Update trip error', err);
+    alert('Failed to update trip. See console for details.');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
 
   if (loading) return <div className="loading">Loading...</div>;
 
