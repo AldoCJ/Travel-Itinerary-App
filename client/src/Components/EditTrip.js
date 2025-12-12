@@ -248,58 +248,124 @@ function EditTrip() {
 
   // ---------------- SUBMIT ----------------
   const onSubmit = async e => {
-    e.preventDefault();
-    if (!validate()) return;
+  e.preventDefault();
+  if (!validate()) return;
 
-    setSubmitting(true);
-    try {
-      let thumbnailUrl = thumbnail || '/public-imgs/default-trip.png';
+  setSubmitting(true);
 
-      if (thumbnailFile) {
+  try {
+    let thumbnailUrl = '/public-imgs/default-trip.png';
+
+    if (thumbnailFile) {
+      try {
+        const uploaded = await tryUploadFileToServer(thumbnailFile);
+        if (uploaded) thumbnailUrl = uploaded;
+        else thumbnailUrl = await fileToDataUrl(thumbnailFile);
+      } catch (err) {
+        console.warn('Upload failed, falling back to data URL:', err);
         try {
-          const uploaded = await tryUploadFileToServer(thumbnailFile);
-          if (uploaded) thumbnailUrl = uploaded;
-          else thumbnailUrl = await fileToDataUrl(thumbnailFile);
-        } catch (err) {
-          console.warn('Upload failed, using data URL fallback', err);
-          thumbnailUrl = await fileToDataUrl(thumbnailFile).catch(() => thumbnail || '/public-imgs/default-trip.png');
+          thumbnailUrl = await fileToDataUrl(thumbnailFile);
+        } catch {
+          thumbnailUrl = '/public-imgs/default-trip.png';
         }
       }
+    } else if (thumbnail) {
+      thumbnailUrl = thumbnail;
+    }
 
-      const patchPayload = {
-        title: title.trim(),
-        description: description.trim(),
-        start_date: date || new Date().toISOString().split('T')[0],
-        end_date: endDate || date || new Date().toISOString().split('T')[0],
-        total_price: budget.toString().trim() || undefined,
-        number_of_people: people.toString().trim() ? parseInt(people, 10) : undefined,
-        photo_url: thumbnailUrl,
-      };
+    // PATCH trip info first
+    const patchPayload = {
+      title: title.trim(),
+      description: description.trim(),
+      start_date: date || new Date().toISOString().split('T')[0],
+      end_date: endDate || date || new Date().toISOString().split('T')[0],
+      total_price: Number(budget) || 0,
+      number_of_people: parseInt(people, 10) || 1,
+      photo_url: thumbnailUrl,
+    };
 
-      Object.keys(patchPayload).forEach(
-        key => (patchPayload[key] === '' || patchPayload[key] === undefined) && delete patchPayload[key]
-      );
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/trips/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(patchPayload),
+    });
 
-      const res = await fetch(`/api/trips/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patchPayload),
+    if (!res.ok) throw new Error(await res.text() || 'Failed to update trip');
+
+    // DELETE all existing days
+    for (const day of days) {
+      if (!day.id) continue; // skip temp days without ID
+      try {
+        await fetch(`/api/trips/${id}/days/${day.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+      } catch (err) {
+        console.error(`Failed to delete day ${day.id}`, err);
+      }
+    }
+
+    // CREATE all days and their activities
+    for (const day of days) {
+      // create day first
+      const dayPayload = { date: day.date || null };
+      const dayRes = await fetch(`/api/trips/${id}/days`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(dayPayload),
       });
 
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err || 'Failed to update trip');
+      if (!dayRes.ok) {
+        console.error('Failed to create day:', await dayRes.text());
+        continue;
       }
 
-      const updated = await res.json();
-      navigate(`/profile`, { state: { updatedTrip: updated } });
-    } catch (err) {
-      console.error('Update trip error', err);
-      alert('Failed to update trip. See console for details.');
-    } finally {
-      setSubmitting(false);
+      const createdDay = await dayRes.json();
+      const dayId = createdDay.id ?? createdDay._id;
+
+      // create activities/events
+      for (const act of day.activities) {
+        const eventPayload = {
+          title: act.description,
+          notes: act.notes || '',
+          location: act.location,
+          cost: act.cost || '0',
+          time: act.time,
+          photo_url: act.photo_url || '',
+        };
+
+        const eventRes = await fetch(`/api/trips/${id}/days/${dayId}/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(eventPayload),
+        });
+
+        if (!eventRes.ok) console.error('Failed to create event:', await eventRes.text());
+      }
     }
-  };
+
+    navigate('/Profile');
+  } catch (error) {
+    console.error('Edit trip error:', error);
+    alert('Failed to update trip. See console for details.');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   if (loading || daysLoading) return <div className="loading">Loading...</div>;
 
