@@ -33,13 +33,18 @@ function EditTrip() {
       setThumbnail(trip.thumbnail || '');
       setThumbnailPreview(trip.thumbnail || '');
       prevPreviewIsObjectRef.current = false; // remote URL, not object URL
-      // use start_date or date if present
-      setDate((trip.start_date || trip.date) ? (trip.start_date || trip.date).split('T')[0] : '');
-      setEndDate(trip.end_date ? trip.end_date.split('T')[0] : '');
-      setDescription(trip.description || '');
+
+      // robust start/end parsing: prefer explicit fields, then fall back to date/duration strings
+      const start = trip.start_date || trip.date || (trip.duration ? trip.duration.split('→')[0]?.trim() : '');
+      const end = trip.end_date || (trip.duration ? trip.duration.split('→')[1]?.trim() : '');
+
+      setDate(start ? String(start).split('T')[0] : '');
+      setEndDate(end ? String(end).split('T')[0] : '');
+
+      setDescription(trip.destination || '');
       setTips((trip.tips && trip.tips.length) ? trip.tips : ['']);
-      setBudget(trip.budget || '');
-      setPeople(trip.number_of_people ? String(trip.number_of_people) : '');
+      setBudget(trip.total_price || '');
+      setPeople(trip.likes ? String(trip.likes) : '');
       setItinerary((trip.itinerary && trip.itinerary.length) ? trip.itinerary : [{ activities: [{ time: '', description: '', location: '' }] }]);
       setLoading(false);
     };
@@ -97,7 +102,7 @@ function EditTrip() {
     const missing = [];
     if (!title.trim()) missing.push('Title');
     if (!destination.trim()) missing.push('Destination');
-    if (!budget.trim()) missing.push('Budget');
+    if (!budget.toString().trim()) missing.push('Budget');
 
     if (!people.toString().trim() || !/^\d+$/.test(people.toString().trim()) || Number(people) <= 0) {
       missing.push('Number of people (positive integer)');
@@ -221,7 +226,7 @@ const onSubmit = async e => {
       summary: description.trim(),
       start_date: date || new Date().toISOString().split('T')[0],
       end_date: endDate || date || new Date().toISOString().split('T')[0],
-      total_price: budget.trim() || undefined,
+      total_price: budget.toString().trim() || undefined,
       number_of_people: people.toString().trim() ? parseInt(people, 10) : undefined,
       photo_url: thumbnailUrl,
     };
@@ -244,7 +249,7 @@ const onSubmit = async e => {
     }
 
     const updated = await res.json();
-    navigate(`/itinerary/${id}`, { state: { trip: updated, isOwnProfile: true } });
+    navigate(`/profile`, { state: { updatedTrip: updated } });
   } catch (err) {
     console.error('Update trip error', err);
     alert('Failed to update trip. See console for details.');
@@ -274,11 +279,6 @@ const onSubmit = async e => {
               <div className="form-row">
                 <label htmlFor="trip-title" className="required">Title</label>
                 <input id="trip-title" value={title} onChange={e => setTitle(e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label htmlFor="trip-destination" className="required">Destination</label>
-                <input id="trip-destination" value={destination} onChange={e => setDestination(e.target.value)} />
               </div>
 
               <div className="form-row two-up">
@@ -377,18 +377,6 @@ const onSubmit = async e => {
                   ))}
                 </div>
 
-                <div className="card tips-editor">
-                  <h2 className="card-title">Travel Tips</h2>
-                  {tips.map((t, i) => (
-                    <div key={i} className="tip-row">
-                      <input value={t} onChange={e => updateTip(i, e.target.value)} />
-                      {tips.length > 1 && <button type="button" className="small-btn ghost" onClick={() => removeTip(i)}>Remove</button>}
-                    </div>
-                  ))}
-                  <div className="tips-actions">
-                    <button type="button" className="btn" onClick={addTip}>+ Add Tip</button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
