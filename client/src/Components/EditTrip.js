@@ -12,14 +12,15 @@ function EditTrip() {
 
   const [title, setTitle] = useState('');
   const [destination, setDestination] = useState('');
-  const [duration, setDuration] = useState('');
   const [thumbnail, setThumbnail] = useState('');
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState('');
   const [date, setDate] = useState('');
+  const [endDate, setEndDate] = useState(''); // new endDate state
   const [description, setDescription] = useState('');
   const [tips, setTips] = useState(['']);
   const [budget, setBudget] = useState('');
+  const [people, setPeople] = useState('');
   const [itinerary, setItinerary] = useState([{ activities: [{ time: '', description: '', location: '' }] }]);
 
   const prevPreviewIsObjectRef = useRef(false);
@@ -29,14 +30,16 @@ function EditTrip() {
     const populate = trip => {
       setTitle(trip.title || '');
       setDestination(trip.destination || '');
-      setDuration(trip.duration || '');
       setThumbnail(trip.thumbnail || '');
       setThumbnailPreview(trip.thumbnail || '');
       prevPreviewIsObjectRef.current = false; // remote URL, not object URL
-      setDate(trip.date ? trip.date.split('T')[0] : '');
+      // use start_date or date if present
+      setDate((trip.start_date || trip.date) ? (trip.start_date || trip.date).split('T')[0] : '');
+      setEndDate(trip.end_date ? trip.end_date.split('T')[0] : '');
       setDescription(trip.description || '');
       setTips((trip.tips && trip.tips.length) ? trip.tips : ['']);
       setBudget(trip.budget || '');
+      setPeople(trip.number_of_people ? String(trip.number_of_people) : '');
       setItinerary((trip.itinerary && trip.itinerary.length) ? trip.itinerary : [{ activities: [{ time: '', description: '', location: '' }] }]);
       setLoading(false);
     };
@@ -88,14 +91,17 @@ function EditTrip() {
     setThumbnailPreview(objUrl);
   };
 
-  // Validation: title, destination, duration, budget required.
+  // Validation: title, destination, budget, people required.
   // For activities: if activity has time or description, location is required.
   const validate = () => {
     const missing = [];
     if (!title.trim()) missing.push('Title');
     if (!destination.trim()) missing.push('Destination');
-    if (!duration.trim()) missing.push('Duration');
     if (!budget.trim()) missing.push('Budget');
+
+    if (!people.toString().trim() || !/^\d+$/.test(people.toString().trim()) || Number(people) <= 0) {
+      missing.push('Number of people (positive integer)');
+    }
 
     const missingLocations = [];
     itinerary.forEach((day, dayIndex) => {
@@ -214,7 +220,9 @@ const onSubmit = async e => {
       title: title.trim(),
       summary: description.trim(),
       start_date: date || new Date().toISOString().split('T')[0],
+      end_date: endDate || date || new Date().toISOString().split('T')[0],
       total_price: budget.trim() || undefined,
+      number_of_people: people.toString().trim() ? parseInt(people, 10) : undefined,
       photo_url: thumbnailUrl,
     };
 
@@ -246,7 +254,6 @@ const onSubmit = async e => {
 };
 
 
-
   if (loading) return <div className="loading">Loading...</div>;
 
   return (
@@ -256,7 +263,7 @@ const onSubmit = async e => {
       <div className="create-trip-container">
         <header className="create-header">
           <h1>Edit Trip</h1>
-          <p className="create-subtext">Update fields and save. Required: Title, Destination, Duration, Budget.</p>
+          <p className="create-subtext">Update fields and save. Required: Title, Destination, Budget, Number of people.</p>
         </header>
 
         <form className="create-trip-form" onSubmit={onSubmit}>
@@ -274,20 +281,32 @@ const onSubmit = async e => {
                 <input id="trip-destination" value={destination} onChange={e => setDestination(e.target.value)} />
               </div>
 
-              <div className="form-row">
-                <label htmlFor="trip-duration" className="required">Duration</label>
-                <input id="trip-duration" value={duration} onChange={e => setDuration(e.target.value)} />
-              </div>
-
               <div className="form-row two-up">
                 <div>
                   <label htmlFor="trip-date">Start Date</label>
                   <input id="trip-date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                 </div>
                 <div>
-                  <label htmlFor="trip-budget" className="required">Budget</label>
-                  <input id="trip-budget" value={budget} onChange={e => setBudget(e.target.value)} />
+                  <label htmlFor="trip-end-date">End Date</label>
+                  <input id="trip-end-date" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                 </div>
+              </div>
+
+              <div className="form-row">
+                <label htmlFor="trip-budget" className="required">Budget</label>
+                <input id="trip-budget" value={budget} onChange={e => setBudget(e.target.value)} />
+              </div>
+
+              <div className="form-row">
+                <label htmlFor="trip-people" className="required">How many people?</label>
+                <input
+                  id="trip-people"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={people}
+                  onChange={e => setPeople(e.target.value.replace(/[^\d]/g, ''))}
+                />
               </div>
 
               <div className="form-row">
@@ -350,12 +369,12 @@ const onSubmit = async e => {
                           )}
                         </div>
                       ))}
+
+                      <div className="itinerary-actions">
+                        <button type="button" className="btn add-day" onClick={addDay}>+ Add Day</button>
+                      </div>
                     </div>
                   ))}
-
-                  <div className="itinerary-actions">
-                    <button type="button" className="btn add-day" onClick={addDay}>+ Add Day</button>
-                  </div>
                 </div>
 
                 <div className="card tips-editor">
