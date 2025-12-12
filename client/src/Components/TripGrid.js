@@ -31,7 +31,6 @@ function TripGrid({ posts, isOwnProfile }) {
                             </div>
                             <div className="post-info-small">
                                 <h4 className="post-title-small">{post.title}</h4>
-                                <p className="post-destination-small">{post.destination}</p>
                                 <p className="post-duration-small">{post.duration}</p>
                             </div>
                         </NavLink>
