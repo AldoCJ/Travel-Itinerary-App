@@ -2,12 +2,56 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import defaultPfp from '../assets/defaultPfp.jpg';
 
+
 const EditProfile = () => {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [pfp, setPfp] = useState(defaultPfp);
   const [pfpFile, setPfpFile] = useState(null);
   const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+  // Use Users table id stored in localStorage (from the 'user' JSON)
+const storedUserJson = localStorage.getItem('user');
+const storedUser = storedUserJson ? JSON.parse(storedUserJson) : null;
+const userId = storedUser ? storedUser.id : null;
+
+const patchProfileText = async () => {
+    console.log('Access token:', token);
+  const res = await fetch(`/users/${userId}`, {   
+    
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name: username, about_me: bio }),
+  });
+
+  
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || 'Text update failed');
+};
+
+const patchProfileImage = async () => {
+  if (!pfpFile) return;
+
+  const formData = new FormData();
+  formData.append('pfp', pfpFile);
+
+  const res = await fetch(`/users/${userId}/pfp`, {   
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || 'Image update failed');
+};
+
+
+
 
   const handlePfpChange = (e) => {
     const file = e.target.files[0];
@@ -17,11 +61,21 @@ const EditProfile = () => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log({ username, bio, pfpFile });
-    alert('Profile updated! (Front-end only)');
-  };
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    await patchProfileText();
+    await patchProfileImage();
+    
+    //alert('Profile updated!');
+  } catch (err) {
+    console.error(err.message);
+    //alert(err.toString());
+  }
+  navigate('/Profile');
+};
+
 
   return (
     <div style={{
@@ -98,6 +152,7 @@ const EditProfile = () => {
         />
         <button
           type="submit"
+          //onClick={() => navigate('/Profile')}
           style={{
             background: '#3a8dde',
             color: '#fff',
